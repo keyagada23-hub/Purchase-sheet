@@ -36,7 +36,7 @@ export function CreatableCombobox({
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
 
-  const selectedItem = items.find((item) => item.id === value);
+  const selectedItem = items.find((item) => item.id === value) || (value ? { id: value, name: value } : null);
   const isExactMatch = items.some((item) => item.name.toLowerCase() === search.toLowerCase());
 
   const handleCreate = async () => {
