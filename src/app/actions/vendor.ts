@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { Vendor } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function getVendors(): Promise<Vendor[]> {
   const vendors = await prisma.vendor.findMany();
@@ -12,7 +13,6 @@ export async function createVendor(data: Omit<Vendor, 'id'>): Promise<Vendor> {
   let categoryId = data.categoryId;
   
   if (!categoryId) {
-    // Find or create a default category for vendors
     let defaultCat = await prisma.masterCategory.findFirst({
       where: { name: 'General Vendor', type: 'Vendor' }
     });
@@ -31,6 +31,9 @@ export async function createVendor(data: Omit<Vendor, 'id'>): Promise<Vendor> {
       categoryId
     },
   });
+  
+  revalidatePath('/vendors');
+  revalidatePath('/vendors/new');
   return vendor as Vendor;
 }
 
@@ -39,6 +42,8 @@ export async function updateVendor(id: string, data: Partial<Vendor>): Promise<V
     where: { id },
     data,
   });
+  
+  revalidatePath('/vendors');
   return vendor as Vendor;
 }
 
@@ -46,4 +51,6 @@ export async function deleteVendor(id: string): Promise<void> {
   await prisma.vendor.delete({
     where: { id },
   });
+  
+  revalidatePath('/vendors');
 }

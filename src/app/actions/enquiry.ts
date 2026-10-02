@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { Enquiry } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function getEnquiries(): Promise<Enquiry[]> {
   const enquiries = await prisma.enquiry.findMany();
@@ -12,6 +13,8 @@ export async function createEnquiry(data: Omit<Enquiry, 'id'>): Promise<Enquiry>
   const enquiry = await prisma.enquiry.create({
     data,
   });
+  revalidatePath('/enquiries');
+  revalidatePath('/enquiries/new');
   return enquiry as Enquiry;
 }
 
@@ -20,6 +23,7 @@ export async function updateEnquiry(id: string, data: Partial<Enquiry>): Promise
     where: { id },
     data,
   });
+  revalidatePath('/enquiries');
   return enquiry as Enquiry;
 }
 
@@ -27,4 +31,5 @@ export async function deleteEnquiry(id: string): Promise<void> {
   await prisma.enquiry.delete({
     where: { id },
   });
+  revalidatePath('/enquiries');
 }

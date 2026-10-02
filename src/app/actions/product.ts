@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { Product } from '@/types';
+import { revalidatePath } from 'next/cache';
 
 export async function getProducts(): Promise<Product[]> {
   const products = await prisma.product.findMany();
@@ -20,6 +21,8 @@ export async function createProduct(data: Omit<Product, 'id'>): Promise<Product>
       status: data.status,
     },
   });
+  revalidatePath('/products');
+  revalidatePath('/products/new');
   return product as Product;
 }
 
@@ -28,6 +31,7 @@ export async function updateProduct(id: string, data: Partial<Product>): Promise
     where: { id },
     data,
   });
+  revalidatePath('/products');
   return product as Product;
 }
 
@@ -35,4 +39,5 @@ export async function deleteProduct(id: string): Promise<void> {
   await prisma.product.delete({
     where: { id },
   });
+  revalidatePath('/products');
 }
