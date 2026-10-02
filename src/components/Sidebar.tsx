@@ -5,25 +5,21 @@ import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { LayoutDashboard, Package, Users, FileText, ShoppingCart, Settings, Shield, BarChart3, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useMounted } from '@/hooks/use-mounted';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { currentUser } = useAppStore();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   const links = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Enquiries', href: '/enquiries', icon: FileText, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Vendors', href: '/vendors', icon: Database, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Products', href: '/products', icon: Package, roles: ['User', 'Admin', 'Developer'] },
-    { name: 'Purchases', href: '/purchases', icon: ShoppingCart, roles: ['Admin', 'Developer'] },
+    { name: 'Purchases', href: '/purchases', icon: ShoppingCart, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['Admin', 'Developer'] },
-    { name: 'Users & Access', href: '/users', icon: Users, roles: ['Developer'] },
+    { name: 'Users & Access', href: '/users', icon: Users, roles: ['Admin', 'Developer'] },
     { name: 'System Settings', href: '/settings', icon: Settings, roles: ['Developer'] },
   ];
 

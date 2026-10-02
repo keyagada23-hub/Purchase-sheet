@@ -1,7 +1,6 @@
 'use client';
 
 import RoleGuard from '@/components/RoleGuard';
-import { useAppStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,14 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useEffect } from 'react';
+import { getCategories } from '@/app/actions/category';
+import { createVendor } from '@/app/actions/vendor';
+import { MasterCategory } from '@/types';
 
 const vendorSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  code: z.string().optional(),
   categoryId: z.string().min(1, 'Category is required'),
-  contactPerson: z.string().optional(),
   phone: z.string().optional(),
-  email: z.string().email('Invalid email'),
+  email: z.string().optional(),
   address: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -30,37 +31,54 @@ const vendorSchema = z.object({
 type VendorFormValues = z.infer<typeof vendorSchema>;
 
 export default function NewVendorPage() {
-  const { addVendor, categories } = useAppStore();
   const router = useRouter();
+  const [categories, setCategories] = useState<MasterCategory[]>([]);
 
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<VendorFormValues>({
+  useEffect(() => {
+    getCategories().then(setCategories).catch(console.error);
+  }, []);
+
+  const vendorCategories = categories.filter(c => c.type === 'Vendor');
+  const distributorCategory = vendorCategories.find(c => c.name.toLowerCase() === 'distributor');
+
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorSchema),
     defaultValues: {
-      country: 'India'
+      country: 'India',
+      categoryId: distributorCategory?.id || ''
     }
   });
 
-  const onSubmit = (data: VendorFormValues) => {
-    addVendor({
-      id: `v${Date.now()}`,
-      name: data.name,
-      code: data.code || `V-${Date.now().toString().slice(-4)}`,
-      categoryId: data.categoryId,
-      contactPerson: data.contactPerson || '',
-      phone: data.phone || '',
-      email: data.email,
-      address: data.address || '',
-      city: data.city || '',
-      state: data.state || '',
-      country: data.country || '',
-      taxId: data.taxId || '',
-      website: data.website || '',
-      status: 'Active'
-    });
-    router.push('/vendors');
+  useEffect(() => {
+    if (distributorCategory) {
+      setValue('categoryId', distributorCategory.id);
+    }
+  }, [distributorCategory, setValue]);
+
+  const categoryId = watch('categoryId');
+
+  const onSubmit = async (data: VendorFormValues) => {
+    try {
+      await createVendor({
+        name: data.name,
+        categoryId: data.categoryId,
+        phone: data.phone || '',
+        email: data.email || '',
+        address: data.address || '',
+        city: data.city || '',
+        state: data.state || '',
+        country: data.country || '',
+        taxId: data.taxId || '',
+        website: data.website || '',
+        status: 'Active'
+      });
+      router.push('/vendors');
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const vendorCategories = categories.filter(c => c.type === 'Vendor');
+
 
   return (
     <RoleGuard roles={['User', 'Admin', 'Developer']}>
@@ -81,32 +99,10 @@ export default function NewVendorPage() {
                 <Input id="name" {...register('name')} placeholder="e.g. ABC Technologies" />
                 {errors.name && <p className="text-sm text-red-500">{errors.name.message}</p>}
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="code">Vendor Code</Label>
-                <Input id="code" {...register('code')} placeholder="e.g. V-001" />
-                {errors.code && <p className="text-sm text-red-500">{errors.code.message}</p>}
-              </div>
 
               <div className="space-y-2">
-                <Label>Category *</Label>
-                <Select onValueChange={(val: string | null) => setValue('categoryId', val || '')}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendorCategories.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="contactPerson">Contact Person</Label>
-                <Input id="contactPerson" {...register('contactPerson')} placeholder="e.g. John Doe" />
-                {errors.contactPerson && <p className="text-sm text-red-500">{errors.contactPerson.message}</p>}
+                <Label htmlFor="taxId">GSTNIN / UIN</Label>
+                <Input id="taxId" {...register('taxId')} placeholder="e.g. 27AAAAA0000A1Z5" />
               </div>
 
               <div className="space-y-2">
@@ -116,7 +112,7 @@ export default function NewVendorPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address *</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input id="email" {...register('email')} placeholder="e.g. contact@vendor.com" />
                 {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
               </div>
@@ -149,11 +145,7 @@ export default function NewVendorPage() {
                 {errors.country && <p className="text-sm text-red-500">{errors.country.message}</p>}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="taxId">Tax ID / GST</Label>
-                <Input id="taxId" {...register('taxId')} placeholder="e.g. 27AAAAA0000A1Z5" />
-              </div>
-              
+
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="website">Website</Label>
                 <Input id="website" {...register('website')} placeholder="e.g. https://www.vendor.com" />

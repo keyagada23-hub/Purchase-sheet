@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  username  String   @unique
+  email     String   @unique
+  password  String
+  role      String   // User | Admin | Developer
+  status    String   @default("Active") // Active | Inactive
+  lastLogin String?
+  logs      ActivityLog[]
+  enquiries Enquiry[]
+}
+
+model MasterCategory {
+  id        String   @id @default(uuid())
+  name      String
+  type      String   // Product | Vendor
+  products  Product[]
+  vendors   Vendor[]
+}
+
+model Brand {
+  id        String   @id @default(uuid())
+  name      String
+  products  Product[]
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  name          String
+  model         String
+  brandId       String
+  brand         Brand    @relation(fields: [brandId], references: [id])
+  categoryId    String
+  category      MasterCategory @relation(fields: [categoryId], references: [id])
+  subcategoryId String?
+  photoUrl      String?
+  status        String   @default("Active") // Active | Inactive
+  enquiries     Enquiry[]
+}
+
+model Vendor {
+  id          String   @id @default(uuid())
+  name        String
+  categoryId  String
+  category    MasterCategory @relation(fields: [categoryId], references: [id])
+  phone       String
+  email       String?
+  address     String
+  city        String
+  state       String
+  country     String
+  taxId       String
+  website     String
+  status      String   @default("Active") // Active | Inactive
+  enquiries   Enquiry[]
+}
+
+model Enquiry {
+  id               String   @id @default(uuid())
+  date             String
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id])
+  vendorId         String
+  vendor           Vendor   @relation(fields: [vendorId], references: [id])
+  quantity         Int
+  enquiryPrice     Float
+  notes            String   @db.Text
+  isPurchased      Boolean  @default(false)
+  purchasePrice    Float?
+  purchaseQuantity Int?
+  serialNumber     String?
+  barcode          String?
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  status           String   @default("Open") // Open | Closed | Cancelled
+  purchaseReason   String?  @db.Text
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  userName   String
+  action     String   // CREATE | UPDATE | DELETE | LOGIN
+  entity     String   // User | Product | Vendor | Enquiry | Category | Brand
+  entityName String
+  details    String   @db.Text
+  timestamp  String
+}

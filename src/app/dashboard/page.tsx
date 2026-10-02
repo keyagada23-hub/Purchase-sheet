@@ -4,16 +4,41 @@ import { useAppStore } from '@/lib/store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Users, FileText, ShoppingCart, Clock, Calendar as CalendarIcon, X } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { getProducts } from '@/app/actions/product';
+import { getVendors } from '@/app/actions/vendor';
+import { getEnquiries } from '@/app/actions/enquiry';
+import { Product, Vendor, Enquiry } from '@/types';
 
 export default function DashboardPage() {
-  const { products, vendors, enquiries, currentUser } = useAppStore();
+  const { currentUser } = useAppStore();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [products, setProducts] = useState<Product[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [p, v, e] = await Promise.all([
+          getProducts(),
+          getVendors(),
+          getEnquiries()
+        ]);
+        setProducts(p);
+        setVendors(v);
+        setEnquiries(e);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
+      }
+    }
+    loadData();
+  }, []);
 
   const isAdminOrDev = currentUser?.role === 'Admin' || currentUser?.role === 'Developer';
 

@@ -6,20 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useEffect, useState } from 'react';
+import { useMounted } from '@/hooks/use-mounted';
 import { User as UserIcon, Shield } from 'lucide-react';
+
+import { loginUser } from '@/app/actions/auth';
 
 export default function LoginPage() {
   const { login, currentUser } = useAppStore();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (mounted && currentUser) {
@@ -27,15 +26,20 @@ export default function LoginPage() {
     }
   }, [currentUser, router, mounted]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     
-    const success = login(username, password);
-    if (success) {
-      router.push('/dashboard');
-    } else {
-      setError('Invalid username or password');
+    try {
+      const user = await loginUser(username, password);
+      if (user) {
+        login(user);
+        router.push('/dashboard');
+      } else {
+        setError('Invalid username or password');
+      }
+    } catch (err) {
+      setError('An error occurred during login.');
     }
   };
 
@@ -96,13 +100,14 @@ export default function LoginPage() {
                   type="button" 
                   variant="outline" 
                   className="w-full border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
-                  onClick={() => {
+                  onClick={async () => {
                     setUsername('john');
                     setPassword('password');
-                    setTimeout(() => {
-                      const success = login('john', 'password');
-                      if (success) router.push('/dashboard');
-                    }, 100);
+                    const user = await loginUser('john', 'password');
+                    if (user) {
+                      login(user);
+                      router.push('/dashboard');
+                    }
                   }}
                 >
                   <UserIcon className="mr-2 h-4 w-4" /> User
@@ -111,13 +116,14 @@ export default function LoginPage() {
                   type="button" 
                   variant="outline" 
                   className="w-full border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
-                  onClick={() => {
+                  onClick={async () => {
                     setUsername('admin');
                     setPassword('password');
-                    setTimeout(() => {
-                      const success = login('admin', 'password');
-                      if (success) router.push('/dashboard');
-                    }, 100);
+                    const user = await loginUser('admin', 'password');
+                    if (user) {
+                      login(user);
+                      router.push('/dashboard');
+                    }
                   }}
                 >
                   <Shield className="mr-2 h-4 w-4" /> Admin

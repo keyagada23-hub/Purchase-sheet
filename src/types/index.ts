@@ -8,8 +8,6 @@ export interface User {
   email: string;
   password?: string;
   role: Role;
-  department: string;
-  location: string;
   status: 'Active' | 'Inactive';
   lastLogin: string;
 }
@@ -23,27 +21,20 @@ export interface MasterCategory {
 export interface Product {
   id: string;
   name: string;
-  code: string;
-  sku: string;
-  barcode: string;
+  model: string;
   brandId: string;
   categoryId: string;
   subcategoryId?: string;
-  description: string;
-  photoUrl: string;
-  unit: string;
-  defaultVendorId: string;
+  photoUrl?: string;
   status: 'Active' | 'Inactive';
 }
 
 export interface Vendor {
   id: string;
   name: string;
-  code: string;
   categoryId: string;
-  contactPerson: string;
   phone: string;
-  email: string;
+  email?: string;
   address: string;
   city: string;
   state: string;
@@ -63,6 +54,9 @@ export interface Enquiry {
   notes: string;
   isPurchased: boolean;
   purchasePrice?: number;
+  purchaseQuantity?: number;
+  serialNumber?: string;
+  barcode?: string;
   userId: string;
   status: 'Open' | 'Closed' | 'Cancelled';
   purchaseReason?: string;
@@ -71,4 +65,15 @@ export interface Enquiry {
 export interface Brand {
   id: string;
   name: string;
+}
+
+export interface ActivityLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: 'CREATE' | 'UPDATE' | 'DELETE' | 'LOGIN';
+  entity: 'User' | 'Product' | 'Vendor' | 'Enquiry' | 'Category' | 'Brand';
+  entityName: string;
+  details: string;
+  timestamp: string;
 }

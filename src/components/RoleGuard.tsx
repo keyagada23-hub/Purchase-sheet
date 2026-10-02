@@ -2,16 +2,13 @@
 'use client';
 import { useAppStore } from '@/lib/store';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useMounted } from '@/hooks/use-mounted';
 
 export default function RoleGuard({ children, roles }: { children: React.ReactNode, roles: string[] }) {
   const { currentUser } = useAppStore();
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   useEffect(() => {
     if (!mounted) return;
