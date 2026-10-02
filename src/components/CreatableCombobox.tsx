@@ -96,6 +96,7 @@ export function CreatableCombobox({
           {onCreate && search && !isExactMatch && (
             <div className="p-1 border-t">
               <Button
+                type="button"
                 variant="ghost"
                 className="w-full justify-start text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                 onClick={handleCreate}
