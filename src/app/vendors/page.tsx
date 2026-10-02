@@ -132,7 +132,7 @@ export default function VendorsPage() {
             </div>
           )}
           <DialogFooter className="mt-4">
-            <DialogClose>
+            <DialogClose asChild>
               <Button type="button" variant="secondary" className="w-full sm:w-auto">Close</Button>
             </DialogClose>
           </DialogFooter>
