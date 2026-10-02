@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Product, Brand, MasterCategory } from '@/types';
 import { getProducts, deleteProduct as deleteProductAction } from '@/app/actions/product';
-import { getCategories, deleteCategory as deleteCategoryAction, getBrands } from '@/app/actions/category';
+import { getCategories, deleteCategory as deleteCategoryAction, updateCategory as updateCategoryAction, getBrands } from '@/app/actions/category';
 
 export default function ProductsPage() {
   const { currentUser } = useAppStore();
@@ -125,20 +125,43 @@ export default function ProductsPage() {
               </SelectContent>
             </Select>
             {currentUser?.role === 'Developer' && selectedCategory !== 'all' && (
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 shrink-0 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
-                onClick={() => {
-                  if (window.confirm("Are you sure you want to delete this category?")) {
-                    deleteCategory(selectedCategory);
-                    setSelectedCategory('all');
-                  }
-                }}
-                title="Delete Selected Category"
-              >
-                <Trash className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-12 w-12 text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                  onClick={async () => {
+                    const category = productCategories.find(c => c.id === selectedCategory);
+                    if (!category) return;
+                    const newName = window.prompt("Enter new category name:", category.name);
+                    if (newName && newName.trim() !== "" && newName !== category.name) {
+                      try {
+                        await updateCategoryAction(selectedCategory, newName.trim());
+                        setCategories(prev => prev.map(c => c.id === selectedCategory ? { ...c, name: newName.trim() } : c));
+                      } catch (err) {
+                        alert("Failed to update category. It might be a duplicate.");
+                      }
+                    }
+                  }}
+                  title="Edit Selected Category"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon" 
+                  className="h-12 w-12 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to delete this category?")) {
+                      deleteCategory(selectedCategory);
+                      setSelectedCategory('all');
+                    }
+                  }}
+                  title="Delete Selected Category"
+                >
+                  <Trash className="h-4 w-4" />
+                </Button>
+              </div>
             )}
           </div>
         </div>
