@@ -41,3 +41,16 @@ export async function deleteProduct(id: string): Promise<void> {
   });
   revalidatePath('/products');
 }
+
+export async function deleteModel(categoryId: string, brandId: string, modelName: string): Promise<void> {
+  await prisma.product.updateMany({
+    where: { 
+      categoryId, 
+      brandId, 
+      model: modelName 
+    },
+    data: { model: null }
+  });
+  revalidatePath('/products');
+  revalidatePath('/products/new');
+}

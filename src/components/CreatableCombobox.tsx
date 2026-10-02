@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, ChevronsUpDown, Plus } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ interface CreatableComboboxProps {
   value: string;
   onChange: (value: string) => void;
   onCreate?: (name: string) => string | Promise<string>; // returns the new ID
+  onDelete?: (id: string) => void | Promise<void>;
   placeholder?: string;
 }
 
@@ -31,6 +32,7 @@ export function CreatableCombobox({
   value,
   onChange,
   onCreate,
+  onDelete,
   placeholder = 'Select an option...',
 }: CreatableComboboxProps) {
   const [open, setOpen] = React.useState(false);
@@ -78,14 +80,34 @@ export function CreatableCombobox({
                     onChange(item.id);
                     setOpen(false);
                   }}
+                  className="flex items-center justify-between group"
                 >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === item.id ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
-                  {item.name}
+                  <div className="flex items-center">
+                    <Check
+                      className={cn(
+                        'mr-2 h-4 w-4',
+                        value === item.id ? 'opacity-100' : 'opacity-0'
+                      )}
+                    />
+                    {item.name}
+                  </div>
+                  {onDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50"
+                      onMouseDown={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+                          await onDelete(item.id);
+                          if (value === item.id) onChange('');
+                        }
+                      }}
+                    >
+                      <Trash className="h-3 w-3" />
+                    </Button>
+                  )}
                 </CommandItem>
               ))}
             </CommandGroup>

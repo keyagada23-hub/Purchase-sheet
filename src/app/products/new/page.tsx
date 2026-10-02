@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { CreatableCombobox } from '@/components/CreatableCombobox';
-import { getProducts, createProduct } from '@/app/actions/product';
-import { getCategories, createCategory, getBrands, createBrand } from '@/app/actions/category';
+import { getProducts, createProduct, deleteModel } from '@/app/actions/product';
+import { getCategories, createCategory, getBrands, createBrand, deleteCategory, deleteBrand } from '@/app/actions/category';
 import { Product, Brand, MasterCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -55,6 +55,8 @@ export default function NewProductPage() {
     resolver: zodResolver(productSchema),
   });
 
+  const { currentUser } = useAppStore();
+  
   const categoryId = watch('categoryId');
   const brandId = watch('brandId');
   const model = watch('model');
@@ -86,6 +88,36 @@ export default function NewProductPage() {
       console.error(error);
       toast({ title: "Error", description: "Failed to create brand. See console.", variant: "destructive" });
       return "";
+    }
+  };
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Cannot delete this category because it is in use.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteBrand = async (id: string) => {
+    try {
+      await deleteBrand(id);
+      setBrands(prev => prev.filter(b => b.id !== id));
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Cannot delete this brand because it is in use.", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteModel = async (id: string) => {
+    try {
+      await deleteModel(categoryId, brandId, id);
+      setProducts(prev => prev.map(p => (p.categoryId === categoryId && p.brandId === brandId && p.model === id) ? { ...p, model: null } : p));
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Cannot delete this model.", variant: "destructive" });
     }
   };
 
@@ -146,6 +178,7 @@ export default function NewProductPage() {
                     value={categoryId}
                     onChange={(val) => setValue('categoryId', val, { shouldValidate: true })}
                     onCreate={handleCreateCategory}
+                    onDelete={currentUser?.role === 'Developer' ? handleDeleteCategory : undefined}
                     placeholder="Select or type category..."
                   />
                   {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
@@ -158,6 +191,7 @@ export default function NewProductPage() {
                     value={brandId}
                     onChange={(val) => setValue('brandId', val, { shouldValidate: true })}
                     onCreate={handleCreateBrand}
+                    onDelete={currentUser?.role === 'Developer' ? handleDeleteBrand : undefined}
                     placeholder="Select or type brand..."
                   />
                   {errors.brandId && <p className="text-sm text-red-500">{errors.brandId.message}</p>}
@@ -170,6 +204,7 @@ export default function NewProductPage() {
                     value={model || ''}
                     onChange={(val) => setValue('model', val, { shouldValidate: true })}
                     onCreate={(name) => name}
+                    onDelete={currentUser?.role === 'Developer' && categoryId && brandId ? handleDeleteModel : undefined}
                     placeholder={categoryId ? "Select or type model..." : "Select a category first..."}
                   />
                   {errors.model && <p className="text-sm text-red-500">{errors.model.message}</p>}
