@@ -18,7 +18,7 @@ import { MasterCategory, Vendor } from '@/types';
 
 const vendorSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  categoryId: z.string().min(1, 'Category is required'),
+  categoryId: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
@@ -64,7 +64,7 @@ export default function EditVendorPage() {
     resolver: zodResolver(vendorSchema),
     defaultValues: {
       country: 'India',
-      categoryId: distributorCategory?.id || ''
+      categoryId: ''
     }
   });
 
@@ -72,7 +72,7 @@ export default function EditVendorPage() {
     if (vendor) {
       reset({
         name: vendor.name,
-        categoryId: vendor.categoryId || distributorCategory?.id || '',
+        categoryId: vendor.categoryId || '',
         phone: vendor.phone || '',
         email: vendor.email || '',
         address: vendor.address || '',
@@ -83,7 +83,7 @@ export default function EditVendorPage() {
         website: vendor.website || '',
       });
     }
-  }, [vendor, reset, distributorCategory]);
+  }, [vendor, reset]);
 
   const onSubmit = async (data: VendorFormValues) => {
     if (!vendor) return;
@@ -91,7 +91,6 @@ export default function EditVendorPage() {
     try {
       await updateVendor(vendor.id, {
         name: data.name,
-        categoryId: data.categoryId,
         phone: data.phone || '',
         email: data.email || '',
         address: data.address || '',

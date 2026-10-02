@@ -9,8 +9,27 @@ export async function getVendors(): Promise<Vendor[]> {
 }
 
 export async function createVendor(data: Omit<Vendor, 'id'>): Promise<Vendor> {
+  let categoryId = data.categoryId;
+  
+  if (!categoryId) {
+    // Find or create a default category for vendors
+    let defaultCat = await prisma.masterCategory.findFirst({
+      where: { name: 'General Vendor', type: 'Vendor' }
+    });
+    
+    if (!defaultCat) {
+      defaultCat = await prisma.masterCategory.create({
+        data: { name: 'General Vendor', type: 'Vendor' }
+      });
+    }
+    categoryId = defaultCat.id;
+  }
+
   const vendor = await prisma.vendor.create({
-    data,
+    data: {
+      ...data,
+      categoryId
+    },
   });
   return vendor as Vendor;
 }

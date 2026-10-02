@@ -18,7 +18,7 @@ import { CreatableCombobox } from '@/components/CreatableCombobox';
 
 const vendorSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  categoryId: z.string().min(1, 'Category is required'),
+  categoryId: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().optional(),
   address: z.string().optional(),
@@ -42,21 +42,15 @@ export default function NewVendorPage() {
   const vendorCategories = categories.filter(c => c.type === 'Vendor');
   const distributorCategory = vendorCategories.find(c => c.name.toLowerCase() === 'distributor');
 
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<VendorFormValues>({
+  const { register, handleSubmit, formState: { errors } } = useForm<VendorFormValues>({
     resolver: zodResolver(vendorSchema),
     defaultValues: {
       country: 'India',
-      categoryId: distributorCategory?.id || ''
+      categoryId: ''
     }
   });
 
-  useEffect(() => {
-    if (distributorCategory) {
-      setValue('categoryId', distributorCategory.id);
-    }
-  }, [distributorCategory, setValue]);
 
-  const categoryId = watch('categoryId');
 
   const onSubmit = async (data: VendorFormValues) => {
     try {
@@ -101,18 +95,6 @@ export default function NewVendorPage() {
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label htmlFor="categoryId">Category *</Label>
-                <CreatableCombobox 
-                  items={vendorCategories}
-                  value={categoryId}
-                  onChange={(val) => setValue('categoryId', val, { shouldValidate: true })}
-                  onCreate={handleCreateCategory}
-                  placeholder="Select or type category..."
-                />
-                {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="name">Vendor Name *</Label>
                 <Input id="name" {...register('name')} placeholder="e.g. ABC Technologies" />
