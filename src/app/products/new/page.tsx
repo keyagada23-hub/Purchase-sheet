@@ -16,6 +16,7 @@ import { CreatableCombobox } from '@/components/CreatableCombobox';
 import { getProducts, createProduct } from '@/app/actions/product';
 import { getCategories, createCategory, getBrands, createBrand } from '@/app/actions/category';
 import { Product, Brand, MasterCategory } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const productSchema = z.object({
   model: z.string().min(2, 'Model must be at least 2 characters'),
@@ -27,6 +28,7 @@ type ProductFormValues = z.infer<typeof productSchema>;
 
 export default function NewProductPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<MasterCategory[]>([]);
@@ -81,6 +83,17 @@ export default function NewProductPage() {
     
     // Auto-generate name based on Category, Brand, and Model
     const generatedName = `${category?.name || 'Product'} ${brand?.name || ''} ${data.model}`.trim();
+
+    const isDuplicate = products.some(p => p.name.toLowerCase() === generatedName.toLowerCase());
+    
+    if (isDuplicate) {
+      toast({
+        title: "Duplicate Product",
+        description: "A product with this exact Name, Brand, and Model already exists.",
+        variant: "destructive"
+      });
+      return;
+    }
 
     await createProduct({
       name: generatedName,

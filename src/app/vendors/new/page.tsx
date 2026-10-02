@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { getCategories, createCategory } from '@/app/actions/category';
-import { createVendor } from '@/app/actions/vendor';
-import { MasterCategory } from '@/types';
+import { createVendor, getVendors } from '@/app/actions/vendor';
+import { MasterCategory, Vendor } from '@/types';
 import { CreatableCombobox } from '@/components/CreatableCombobox';
+import { useToast } from '@/hooks/use-toast';
 
 const vendorSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -33,10 +34,13 @@ type VendorFormValues = z.infer<typeof vendorSchema>;
 
 export default function NewVendorPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [categories, setCategories] = useState<MasterCategory[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
 
   useEffect(() => {
     getCategories().then(setCategories).catch(console.error);
+    getVendors().then(setVendors).catch(console.error);
   }, []);
 
   const vendorCategories = categories.filter(c => c.type === 'Vendor');
@@ -53,6 +57,17 @@ export default function NewVendorPage() {
 
 
   const onSubmit = async (data: VendorFormValues) => {
+    const isDuplicate = vendors.some(v => v.name.toLowerCase() === data.name.toLowerCase());
+    
+    if (isDuplicate) {
+      toast({
+        title: "Duplicate Vendor",
+        description: "A vendor with this name already exists in the system.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       await createVendor({
         name: data.name,
