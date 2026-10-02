@@ -66,13 +66,13 @@ export default function NewProductPage() {
   )).map(m => ({ id: m, name: m }));
 
   const handleCreateCategory = async (name: string) => {
-    const newCat = await createCategory({ name, type: 'Product', description: null });
+    const newCat = await createCategory({ name, type: 'Product' });
     setCategories(prev => [...prev, newCat]);
     return newCat.id;
   };
 
   const handleCreateBrand = async (name: string) => {
-    const newBrand = await createBrand({ name, description: null });
+    const newBrand = await createBrand({ name });
     setBrands(prev => [...prev, newBrand]);
     return newBrand.id;
   };

@@ -89,7 +89,7 @@ export default function NewVendorPage() {
   };
 
   const handleCreateCategory = async (name: string) => {
-    const newCat = await createCategory({ name, type: 'Vendor', description: null });
+    const newCat = await createCategory({ name, type: 'Vendor' });
     setCategories(prev => [...prev, newCat]);
     return newCat.id;
   };
