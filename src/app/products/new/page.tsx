@@ -66,15 +66,27 @@ export default function NewProductPage() {
   )).map(m => ({ id: m, name: m }));
 
   const handleCreateCategory = async (name: string) => {
-    const newCat = await createCategory({ name, type: 'Product' });
-    setCategories(prev => [...prev, newCat]);
-    return newCat.id;
+    try {
+      const newCat = await createCategory({ name, type: 'Product' });
+      setCategories(prev => [...prev, newCat]);
+      return newCat.id;
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to create category. See console.", variant: "destructive" });
+      return "";
+    }
   };
 
   const handleCreateBrand = async (name: string) => {
-    const newBrand = await createBrand({ name });
-    setBrands(prev => [...prev, newBrand]);
-    return newBrand.id;
+    try {
+      const newBrand = await createBrand({ name });
+      setBrands(prev => [...prev, newBrand]);
+      return newBrand.id;
+    } catch (error) {
+      console.error(error);
+      toast({ title: "Error", description: "Failed to create brand. See console.", variant: "destructive" });
+      return "";
+    }
   };
 
   const onSubmit = async (data: ProductFormValues) => {
