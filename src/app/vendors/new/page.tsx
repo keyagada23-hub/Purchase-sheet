@@ -11,9 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
-import { getCategories } from '@/app/actions/category';
+import { getCategories, createCategory } from '@/app/actions/category';
 import { createVendor } from '@/app/actions/vendor';
 import { MasterCategory } from '@/types';
+import { CreatableCombobox } from '@/components/CreatableCombobox';
 
 const vendorSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -78,6 +79,12 @@ export default function NewVendorPage() {
     }
   };
 
+  const handleCreateCategory = async (name: string) => {
+    const newCat = await createCategory({ name, type: 'Vendor', description: null });
+    setCategories(prev => [...prev, newCat]);
+    return newCat.id;
+  };
+
 
 
   return (
@@ -94,6 +101,18 @@ export default function NewVendorPage() {
               <CardTitle>Basic Information</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="categoryId">Category *</Label>
+                <CreatableCombobox 
+                  items={vendorCategories}
+                  value={categoryId}
+                  onChange={(val) => setValue('categoryId', val, { shouldValidate: true })}
+                  onCreate={handleCreateCategory}
+                  placeholder="Select or type category..."
+                />
+                {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
+              </div>
+
               <div className="space-y-2">
                 <Label htmlFor="name">Vendor Name *</Label>
                 <Input id="name" {...register('name')} placeholder="e.g. ABC Technologies" />
