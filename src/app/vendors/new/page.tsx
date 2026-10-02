@@ -82,6 +82,7 @@ export default function NewVendorPage() {
         website: data.website || '',
         status: 'Active'
       });
+      toast({ title: "Success", description: "Vendor created successfully!" });
       router.push('/vendors');
     } catch (err) {
       console.error(err);

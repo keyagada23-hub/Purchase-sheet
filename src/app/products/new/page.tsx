@@ -148,6 +148,7 @@ export default function NewProductPage() {
       photoUrl: null,
       status: 'Active'
     });
+    toast({ title: "Success", description: "Product created successfully!" });
     router.push('/products');
   };
 
