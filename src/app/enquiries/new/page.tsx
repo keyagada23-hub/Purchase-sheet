@@ -291,6 +291,7 @@ function EnquiryForm() {
               <Input 
                 id="enquiryPrice" 
                 type="number" 
+                step="any"
                 placeholder="25000"
                 {...register('enquiryPrice', { 
                   valueAsNumber: true,
@@ -308,6 +309,7 @@ function EnquiryForm() {
               <Input 
                 id="enquiryPriceWithGst" 
                 type="number" 
+                step="any"
                 placeholder="29500"
                 {...register('enquiryPriceWithGst', { 
                   valueAsNumber: true,
@@ -379,6 +381,7 @@ function EnquiryForm() {
                   <Input 
                     id="purchasePrice" 
                     type="number" 
+                    step="any"
                     {...register('purchasePrice', { 
                       valueAsNumber: true,
                       onChange: (e) => {
@@ -395,6 +398,7 @@ function EnquiryForm() {
                   <Input 
                     id="purchasePriceWithGst" 
                     type="number" 
+                    step="any"
                     {...register('purchasePriceWithGst', { 
                       valueAsNumber: true,
                       onChange: (e) => {

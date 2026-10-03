@@ -95,7 +95,7 @@ export default function VendorsPage() {
                     </TableRow>
                     {expandedVendorId === vendor.id && (
                       <TableRow className="bg-slate-50/80 border-b">
-                        <TableCell colSpan={canEdit ? 5 : 4} className="p-0 whitespace-normal">
+                        <TableCell colSpan={canEdit ? 5 : 4} className="p-0" style={{ whiteSpace: 'normal' }}>
                           <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-2 fade-in-20 duration-200">
                             <div className="space-y-1 min-w-0">
                               <p className="text-xs font-semibold text-slate-500 uppercase">Contact Information</p>
