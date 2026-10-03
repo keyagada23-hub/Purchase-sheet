@@ -97,23 +97,23 @@ export default function VendorsPage() {
                       <TableRow className="bg-slate-50/80 border-b">
                         <TableCell colSpan={canEdit ? 5 : 4} className="p-0">
                           <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-top-2 fade-in-20 duration-200">
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-0">
                               <p className="text-xs font-semibold text-slate-500 uppercase">Contact Information</p>
-                              <p className="text-sm"><span className="font-medium">Email:</span> {vendor.email || 'N/A'}</p>
-                              <p className="text-sm"><span className="font-medium">Phone:</span> {vendor.phone || 'N/A'}</p>
+                              <p className="text-sm break-words"><span className="font-medium">Email:</span> {vendor.email || 'N/A'}</p>
+                              <p className="text-sm break-words"><span className="font-medium">Phone:</span> {vendor.phone || 'N/A'}</p>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-0">
                               <p className="text-xs font-semibold text-slate-500 uppercase">Location Details</p>
-                              <p className="text-sm"><span className="font-medium">Address:</span> {vendor.address || 'N/A'}</p>
-                              <p className="text-sm"><span className="font-medium">Region:</span> {[vendor.city, vendor.state, vendor.country].filter(Boolean).join(', ') || 'N/A'}</p>
+                              <p className="text-sm break-words"><span className="font-medium">Address:</span> {vendor.address || 'N/A'}</p>
+                              <p className="text-sm break-words"><span className="font-medium">Region:</span> {[vendor.city, vendor.state, vendor.country].filter(Boolean).join(', ') || 'N/A'}</p>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 min-w-0">
                               <p className="text-xs font-semibold text-slate-500 uppercase">Business Details</p>
-                              <p className="text-sm"><span className="font-medium">GSTNIN/UIN:</span> {vendor.taxId || 'N/A'}</p>
-                              <p className="text-sm flex items-center gap-1">
-                                <span className="font-medium">Website:</span> 
+                              <p className="text-sm break-words"><span className="font-medium">GSTNIN/UIN:</span> {vendor.taxId || 'N/A'}</p>
+                              <p className="text-sm break-all flex items-center gap-1">
+                                <span className="font-medium shrink-0">Website:</span> 
                                 {vendor.website ? (
-                                  <a href={vendor.website.startsWith('http') ? vendor.website : `https://${vendor.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                                  <a href={vendor.website.startsWith('http') ? vendor.website : `https://${vendor.website}`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline truncate">
                                     {vendor.website}
                                   </a>
                                 ) : 'N/A'}
