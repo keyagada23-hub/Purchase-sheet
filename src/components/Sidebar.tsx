@@ -6,11 +6,27 @@ import { useAppStore } from '@/lib/store';
 import { LayoutDashboard, Package, Users, FileText, ShoppingCart, Settings, Shield, BarChart3, Database, Layers } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMounted } from '@/hooks/use-mounted';
+import { useEffect } from 'react';
+import { heartbeatUser } from '@/app/actions/user';
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { currentUser } = useAppStore();
   const mounted = useMounted();
+
+  useEffect(() => {
+    if (!currentUser) return;
+    
+    // Send initial heartbeat
+    heartbeatUser(currentUser.id);
+    
+    // Send heartbeat every 60 seconds
+    const interval = setInterval(() => {
+      heartbeatUser(currentUser.id);
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   const links = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['User', 'Admin', 'Developer'] },

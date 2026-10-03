@@ -26,6 +26,10 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    
+    // Refresh user list every 30 seconds to keep online statuses live
+    const interval = setInterval(loadUsers, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -47,6 +51,14 @@ export default function UsersPage() {
     return false;
   };
 
+  const isOnline = (lastLogin: string | null) => {
+    if (!lastLogin) return false;
+    const lastActiveTime = new Date(lastLogin).getTime();
+    const now = new Date().getTime();
+    // Consider online if heartbeat was within the last 5 minutes
+    return (now - lastActiveTime) < 5 * 60 * 1000;
+  };
+
   return (
     <RoleGuard roles={['Admin', 'Developer']}>
       <div className="space-y-6">
@@ -66,14 +78,15 @@ export default function UsersPage() {
                 <TableHead>Name</TableHead>
                 <TableHead>Username</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Account Status</TableHead>
+                <TableHead>Current Activity</TableHead>
                 {canManage && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canManage ? 5 : 4} className="text-center py-8">No users found</TableCell>
+                  <TableCell colSpan={canManage ? 6 : 5} className="text-center py-8">No users found</TableCell>
                 </TableRow>
               ) : (
                 users.map((user: User) => (
@@ -90,17 +103,25 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell>
-                      {user.id === currentUser?.id ? (
-                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${user.status === 'Active' ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700'}`}>
+                        {user.status}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      {isOnline(user.lastLogin) ? (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 border border-green-200">
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                           </span>
-                          Online
+                          Active Now
                         </span>
                       ) : (
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${user.status === 'Active' ? 'bg-slate-100 text-slate-700' : 'bg-red-100 text-red-700'}`}>
-                          {user.status}
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                          <span className="relative flex h-2 w-2">
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                          </span>
+                          Offline
                         </span>
                       )}
                     </TableCell>

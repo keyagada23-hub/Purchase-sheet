@@ -34,3 +34,14 @@ export async function deleteUser(id: string): Promise<void> {
     prisma.user.delete({ where: { id } }),
   ]);
 }
+
+export async function heartbeatUser(id: string): Promise<void> {
+  try {
+    await prisma.user.update({
+      where: { id },
+      data: { lastLogin: new Date().toISOString() }
+    });
+  } catch (e) {
+    // Ignore errors for heartbeat to prevent spamming server logs
+  }
+}
