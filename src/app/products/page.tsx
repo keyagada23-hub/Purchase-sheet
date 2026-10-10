@@ -241,10 +241,15 @@ export default function ProductsPage() {
 
             </div>
           )}
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 sm:justify-end gap-2">
             <DialogClose asChild>
-              <Button type="button" variant="secondary" className="w-full sm:w-auto">Close</Button>
+              <Button type="button" variant="outline" className="w-full sm:w-auto">Close</Button>
             </DialogClose>
+            {canEdit && selectedProduct && (
+              <Button type="button" onClick={() => router.push(`/products/${selectedProduct.id}/edit`)}>
+                <Edit className="mr-2 h-4 w-4" /> Edit Record
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
