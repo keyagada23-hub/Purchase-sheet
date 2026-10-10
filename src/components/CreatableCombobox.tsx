@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Check, ChevronsUpDown, Plus, Trash } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Trash, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +23,7 @@ interface CreatableComboboxProps {
   value: string;
   onChange: (value: string) => void;
   onCreate?: (name: string) => string | Promise<string>; // returns the new ID
+  onEdit?: (id: string, newName: string) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
   placeholder?: string;
 }
@@ -32,6 +33,7 @@ export function CreatableCombobox({
   value,
   onChange,
   onCreate,
+  onEdit,
   onDelete,
   placeholder = 'Select an option...',
 }: CreatableComboboxProps) {
@@ -91,23 +93,51 @@ export function CreatableCombobox({
                     />
                     {item.name}
                   </div>
-                  {onDelete && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50"
-                      onMouseDown={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
-                          await onDelete(item.id);
-                          if (value === item.id) onChange('');
-                        }
-                      }}
-                    >
-                      <Trash className="h-3 w-3" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-1">
+                    {(onCreate || onEdit) && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-blue-600 hover:bg-blue-50"
+                        onMouseDown={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (onEdit) {
+                            const newName = window.prompt(`Edit "${item.name}":`, item.name);
+                            if (newName && newName.trim() !== "" && newName !== item.name) {
+                              await onEdit(item.id, newName.trim());
+                              // If the id was the name itself (like Model), update the selected value
+                              if (value === item.id && item.id === item.name) {
+                                onChange(newName.trim());
+                              }
+                            }
+                          } else {
+                            setSearch(item.name);
+                          }
+                        }}
+                        title="Edit this item"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    )}
+                    {onDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-slate-400 opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50"
+                        onMouseDown={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to delete "${item.name}"?`)) {
+                            await onDelete(item.id);
+                            if (value === item.id) onChange('');
+                          }
+                        }}
+                      >
+                        <Trash className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>

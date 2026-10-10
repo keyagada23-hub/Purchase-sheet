@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { CreatableCombobox } from '@/components/CreatableCombobox';
-import { getProducts, createProduct, deleteModel } from '@/app/actions/product';
-import { getCategories, createCategory, getBrands, createBrand, deleteCategory, deleteBrand } from '@/app/actions/category';
+import { getProducts, createProduct, deleteModel, updateModelName } from '@/app/actions/product';
+import { getCategories, createCategory, updateCategory, getBrands, createBrand, updateBrand, deleteCategory, deleteBrand } from '@/app/actions/category';
 import { Product, Brand, MasterCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
@@ -69,7 +69,7 @@ export default function NewProductPage() {
 
   const handleCreateCategory = async (name: string) => {
     try {
-      const newCat = await createCategory({ name, type: 'Product' });
+      const newCat = await createCategory({ name, type: 'Product', description: null });
       setCategories(prev => [...prev, newCat]);
       return newCat.id;
     } catch (error) {
@@ -79,9 +79,14 @@ export default function NewProductPage() {
     }
   };
 
+  const handleEditCategory = async (id: string, newName: string) => {
+    await updateCategory(id, newName);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
+  };
+
   const handleCreateBrand = async (name: string) => {
     try {
-      const newBrand = await createBrand({ name });
+      const newBrand = await createBrand({ name, description: null });
       setBrands(prev => [...prev, newBrand]);
       return newBrand.id;
     } catch (error) {
@@ -89,6 +94,11 @@ export default function NewProductPage() {
       toast({ title: "Error", description: "Failed to create brand. See console.", variant: "destructive" });
       return "";
     }
+  };
+
+  const handleEditBrand = async (id: string, newName: string) => {
+    await updateBrand(id, newName);
+    setBrands(prev => prev.map(b => b.id === id ? { ...b, name: newName } : b));
   };
 
   const handleDeleteCategory = async (id: string) => {
@@ -109,6 +119,16 @@ export default function NewProductPage() {
       console.error(error);
       toast({ title: "Error", description: "Cannot delete this brand because it is in use.", variant: "destructive" });
     }
+  };
+
+  const handleEditModel = async (oldName: string, newName: string) => {
+    if (!categoryId || !brandId) return;
+    await updateModelName(categoryId, brandId, oldName, newName);
+    setProducts(prev => prev.map(p => 
+      (p.categoryId === categoryId && p.brandId === brandId && p.model === oldName)
+        ? { ...p, model: newName }
+        : p
+    ));
   };
 
   const handleDeleteModel = async (id: string) => {
@@ -139,17 +159,25 @@ export default function NewProductPage() {
       return;
     }
 
-    await createProduct({
-      name: generatedName,
-      model: data.model,
-      brandId: data.brandId,
-      categoryId: data.categoryId,
-      subcategoryId: null,
-      photoUrl: null,
-      status: 'Active'
-    });
-    toast({ title: "Success", description: "Product created successfully!" });
-    router.push('/products');
+    try {
+      await createProduct({
+        name: generatedName,
+        model: data.model,
+        brandId: data.brandId,
+        categoryId: data.categoryId,
+        subcategoryId: null,
+        photoUrl: null,
+        status: 'Active'
+      });
+      toast({ title: "Success", description: "Product created successfully!" });
+      router.push('/products');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create product.",
+        variant: "destructive"
+      });
+    }
   };
 
   const productCategories = categories.filter(c => c.type === 'Product');
@@ -179,6 +207,7 @@ export default function NewProductPage() {
                     value={categoryId}
                     onChange={(val) => setValue('categoryId', val, { shouldValidate: true })}
                     onCreate={handleCreateCategory}
+                    onEdit={handleEditCategory}
                     onDelete={currentUser?.role === 'Developer' ? handleDeleteCategory : undefined}
                     placeholder="Select or type category..."
                   />
@@ -192,6 +221,7 @@ export default function NewProductPage() {
                     value={brandId}
                     onChange={(val) => setValue('brandId', val, { shouldValidate: true })}
                     onCreate={handleCreateBrand}
+                    onEdit={handleEditBrand}
                     onDelete={currentUser?.role === 'Developer' ? handleDeleteBrand : undefined}
                     placeholder="Select or type brand..."
                   />
@@ -205,6 +235,7 @@ export default function NewProductPage() {
                     value={model || ''}
                     onChange={(val) => setValue('model', val, { shouldValidate: true })}
                     onCreate={(name) => name}
+                    onEdit={handleEditModel}
                     onDelete={currentUser?.role === 'Developer' && categoryId && brandId ? handleDeleteModel : undefined}
                     placeholder={categoryId ? "Select or type model..." : "Select a category first..."}
                   />

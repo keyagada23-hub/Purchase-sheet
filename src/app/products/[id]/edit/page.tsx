@@ -13,9 +13,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { CreatableCombobox } from '@/components/CreatableCombobox';
-import { getProducts, updateProduct as updateProductAction } from '@/app/actions/product';
-import { getCategories, createCategory, getBrands, createBrand } from '@/app/actions/category';
+import { getProducts, updateProduct as updateProductAction, updateModelName } from '@/app/actions/product';
+import { getCategories, createCategory, updateCategory, getBrands, createBrand, updateBrand } from '@/app/actions/category';
 import { Product, Brand, MasterCategory } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 const productSchema = z.object({
   model: z.string().min(2, 'Model must be at least 2 characters'),
@@ -29,6 +30,7 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
   const productId = params?.id as string;
+  const { toast } = useToast();
   
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
@@ -103,10 +105,30 @@ export default function EditProductPage() {
     return newCat.id;
   };
 
+  const handleEditCategory = async (id: string, newName: string) => {
+    await updateCategory(id, newName);
+    setCategories(prev => prev.map(c => c.id === id ? { ...c, name: newName } : c));
+  };
+
   const handleCreateBrand = async (name: string) => {
     const newBrand = await createBrand({ name, description: null });
     setBrands(prev => [...prev, newBrand]);
     return newBrand.id;
+  };
+
+  const handleEditBrand = async (id: string, newName: string) => {
+    await updateBrand(id, newName);
+    setBrands(prev => prev.map(b => b.id === id ? { ...b, name: newName } : b));
+  };
+
+  const handleEditModel = async (oldName: string, newName: string) => {
+    if (!categoryId || !brandId) return;
+    await updateModelName(categoryId, brandId, oldName, newName);
+    setProducts(prev => prev.map(p => 
+      (p.categoryId === categoryId && p.brandId === brandId && p.model === oldName)
+        ? { ...p, model: newName }
+        : p
+    ));
   };
 
   const onSubmit = async (data: ProductFormValues) => {
@@ -116,11 +138,33 @@ export default function EditProductPage() {
     // Auto-generate name based on Category, Brand, and Model
     const generatedName = `${category?.name || 'Product'} ${brand?.name || ''} ${data.model}`.trim();
 
-    await updateProductAction(productId, {
-      ...data,
-      name: generatedName,
-    });
-    router.push('/products');
+    const isDuplicate = products.some(p => 
+      p.id !== productId && p.name.toLowerCase() === generatedName.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      toast({
+        title: "Duplicate Product",
+        description: "A product with this exact Name, Brand, and Model already exists.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      await updateProductAction(productId, {
+        ...data,
+        name: generatedName,
+      });
+      toast({ title: "Success", description: "Product updated successfully!" });
+      router.push('/products');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update product.",
+        variant: "destructive"
+      });
+    }
   };
 
   const productCategories = categories.filter(c => c.type === 'Product');
@@ -150,6 +194,7 @@ export default function EditProductPage() {
                     value={categoryId}
                     onChange={(val) => setValue('categoryId', val, { shouldValidate: true })}
                     onCreate={handleCreateCategory}
+                    onEdit={handleEditCategory}
                     placeholder="Select or type category..."
                   />
                   {errors.categoryId && <p className="text-sm text-red-500">{errors.categoryId.message}</p>}
@@ -162,6 +207,7 @@ export default function EditProductPage() {
                     value={brandId}
                     onChange={(val) => setValue('brandId', val, { shouldValidate: true })}
                     onCreate={handleCreateBrand}
+                    onEdit={handleEditBrand}
                     placeholder="Select or type brand..."
                   />
                   {errors.brandId && <p className="text-sm text-red-500">{errors.brandId.message}</p>}
@@ -174,6 +220,7 @@ export default function EditProductPage() {
                     value={model || ''}
                     onChange={(val) => setValue('model', val, { shouldValidate: true })}
                     onCreate={(name) => name}
+                    onEdit={handleEditModel}
                     placeholder={categoryId ? "Select or type model..." : "Select a category first..."}
                   />
                   {errors.model && <p className="text-sm text-red-500">{errors.model.message}</p>}
