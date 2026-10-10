@@ -5,7 +5,9 @@ import { MasterCategory, Brand } from '@/types';
 import { revalidatePath } from 'next/cache';
 
 export async function getCategories(): Promise<MasterCategory[]> {
-  const categories = await prisma.masterCategory.findMany();
+  const categories = await prisma.masterCategory.findMany({
+    orderBy: { name: 'asc' }
+  });
   return categories as MasterCategory[];
 }
 
@@ -55,7 +57,9 @@ export async function deleteCategory(id: string): Promise<void> {
 }
 
 export async function getBrands(): Promise<Brand[]> {
-  const brands = await prisma.brand.findMany();
+  const brands = await prisma.brand.findMany({
+    orderBy: { name: 'asc' }
+  });
   return brands as Brand[];
 }
 

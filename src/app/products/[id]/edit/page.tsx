@@ -71,7 +71,7 @@ export default function EditProductPage() {
     products
       .filter(p => p.categoryId === categoryId && p.model)
       .map(p => p.model)
-  )).map(m => ({ id: m, name: m }));
+  )).map(m => ({ id: m, name: m })).sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
     if (product) {

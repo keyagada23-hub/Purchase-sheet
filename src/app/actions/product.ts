@@ -5,7 +5,9 @@ import { Product } from '@/types';
 import { revalidatePath } from 'next/cache';
 
 export async function getProducts(): Promise<Product[]> {
-  const products = await prisma.product.findMany();
+  const products = await prisma.product.findMany({
+    orderBy: { name: 'asc' }
+  });
   return products as Product[];
 }
 

@@ -5,7 +5,9 @@ import { Vendor } from '@/types';
 import { revalidatePath } from 'next/cache';
 
 export async function getVendors(): Promise<Vendor[]> {
-  const vendors = await prisma.vendor.findMany();
+  const vendors = await prisma.vendor.findMany({
+    orderBy: { name: 'asc' }
+  });
   return vendors as Vendor[];
 }
 

@@ -3,8 +3,7 @@ import RoleGuard from '@/components/RoleGuard';
 import { useAppStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash, Search, Barcode, Filter } from 'lucide-react';
+import { Plus, Edit, Trash, Search, Barcode } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -103,33 +102,17 @@ export default function ProductsPage() {
               <Search className="h-4 w-4" />
             </Button>
           </form>
+        </div>
 
-          {/* Category Filter */}
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Select value={selectedCategory} onValueChange={(val) => setSelectedCategory(val || 'all')}>
-              <SelectTrigger className="w-full sm:w-[250px] h-12 bg-white shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-slate-500" />
-                  <span className="truncate">
-                    {selectedCategory === 'all' 
-                      ? 'All Categories' 
-                      : productCategories.find(c => c.id === selectedCategory)?.name || 'All Categories'}
-                  </span>
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                {productCategories.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="mt-8 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Categories</h2>
             {currentUser?.role === 'Developer' && selectedCategory !== 'all' && (
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2">
                 <Button 
                   variant="outline" 
-                  size="icon" 
-                  className="h-12 w-12 text-blue-500 border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                  size="sm" 
+                  className="text-blue-600 border-blue-200 hover:bg-blue-50"
                   onClick={async () => {
                     const category = productCategories.find(c => c.id === selectedCategory);
                     if (!category) return;
@@ -143,30 +126,49 @@ export default function ProductsPage() {
                       }
                     }
                   }}
-                  title="Edit Selected Category"
                 >
-                  <Edit className="h-4 w-4" />
+                  <Edit className="h-4 w-4 mr-1" /> Edit
                 </Button>
                 <Button 
                   variant="outline" 
-                  size="icon" 
-                  className="h-12 w-12 text-red-500 border-red-200 hover:bg-red-50 hover:text-red-600"
+                  size="sm" 
+                  className="text-red-600 border-red-200 hover:bg-red-50"
                   onClick={() => {
                     if (window.confirm("Are you sure you want to delete this category?")) {
                       deleteCategory(selectedCategory);
                       setSelectedCategory('all');
                     }
                   }}
-                  title="Delete Selected Category"
                 >
-                  <Trash className="h-4 w-4" />
+                  <Trash className="h-4 w-4 mr-1" /> Delete
                 </Button>
               </div>
             )}
           </div>
+          
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            <div 
+              className={`p-4 border rounded-xl cursor-pointer flex items-center justify-center text-center transition-all ${selectedCategory === 'all' ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white hover:border-blue-300 hover:shadow-sm'}`}
+              onClick={() => setSelectedCategory('all')}
+            >
+              <span className={`font-medium ${selectedCategory === 'all' ? 'text-blue-700' : 'text-slate-700'}`}>All Products</span>
+            </div>
+            {productCategories.map(c => (
+              <div 
+                key={c.id}
+                className={`p-4 border rounded-xl cursor-pointer flex items-center justify-center text-center transition-all ${selectedCategory === c.id ? 'bg-blue-50 border-blue-500 shadow-sm' : 'bg-white hover:border-blue-300 hover:shadow-sm'}`}
+                onClick={() => setSelectedCategory(c.id)}
+              >
+                <span className={`font-medium ${selectedCategory === c.id ? 'text-blue-700' : 'text-slate-700'} line-clamp-2`}>{c.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 pt-4">
+        <h2 className="text-lg font-semibold text-slate-800 mb-4 mt-6">
+          {selectedCategory === 'all' ? 'All Products' : productCategories.find(c => c.id === selectedCategory)?.name || 'Products'}
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredProducts.length === 0 ? (
             <div className="col-span-full text-center py-12 text-slate-500 bg-white border rounded-xl">
               No products found

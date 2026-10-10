@@ -65,7 +65,7 @@ export default function NewProductPage() {
     products
       .filter(p => p.categoryId === categoryId && p.model)
       .map(p => p.model)
-  )).map(m => ({ id: m, name: m }));
+  )).map(m => ({ id: m, name: m })).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleCreateCategory = async (name: string) => {
     try {
