@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { LayoutDashboard, Package, Users, FileText, ShoppingCart, Settings, Shield, BarChart3, Database, Layers } from 'lucide-react';
+import { LayoutDashboard, Package, Users, FileText, ShoppingCart, Settings, Shield, BarChart3, Database, Layers, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMounted } from '@/hooks/use-mounted';
 import { useEffect } from 'react';
@@ -33,6 +33,7 @@ export default function Sidebar() {
     { name: 'Enquiries', href: '/enquiries', icon: FileText, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Vendors', href: '/vendors', icon: Database, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Products', href: '/products', icon: Package, roles: ['User', 'Admin', 'Developer'] },
+    { name: 'Total Costing', href: '/total-costing', icon: Calculator, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Purchases', href: '/purchases', icon: ShoppingCart, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['Admin', 'Developer'] },
     { name: 'Master Data', href: '/master-data', icon: Layers, roles: ['Developer'] },

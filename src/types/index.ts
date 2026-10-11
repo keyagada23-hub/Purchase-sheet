@@ -65,7 +65,7 @@ export interface Enquiry {
   userId: string;
   status: 'Open' | 'Closed' | 'Cancelled';
   purchaseReason?: string;
-  subCosts?: string; // JSON string of SubCostItem[]
+  subCosts?: string | null; // JSON string of SubCostItem[]
 }
 
 export interface Brand {
