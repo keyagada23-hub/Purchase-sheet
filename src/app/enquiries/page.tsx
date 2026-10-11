@@ -199,37 +199,73 @@ export default function EnquiriesPage() {
                   <p className="font-medium text-blue-700">₹ {formatPrice(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity * 1.18)}</p>
                 </div>
                 
-                {selectedEnquiry.isPurchased && (
-                  <>
-                    <div className="col-span-2 border-t pt-4 mt-2">
-                      <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500">Purchased Quantity</span>
-                      <p className="font-medium text-green-700">{selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500">Total Spent (w/o GST)</span>
-                      <p className="font-medium text-green-700">₹ {formatPrice((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity))}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <span className="text-xs text-slate-500">Total Spent (w/ 18% GST)</span>
-                      <p className="font-medium text-green-700">₹ {formatPrice((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity) * 1.18)}</p>
-                    </div>
-                    {selectedEnquiry.serialNumber && (
-                      <div className="space-y-1">
-                        <span className="text-xs text-slate-500">Serial Number</span>
-                        <p className="font-medium font-mono">{selectedEnquiry.serialNumber}</p>
+                {selectedEnquiry.isPurchased && (() => {
+                  const parsedSubCosts: { name: string; price: number }[] = (() => {
+                    if (!selectedEnquiry.subCosts) return [];
+                    try {
+                      return JSON.parse(selectedEnquiry.subCosts);
+                    } catch {
+                      return [];
+                    }
+                  })();
+                  const totalSub = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                  const baseSpent = (selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity);
+                  const totalCosting = baseSpent + totalSub;
+
+                  return (
+                    <>
+                      <div className="col-span-2 border-t pt-4 mt-2">
+                        <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
                       </div>
-                    )}
-                    {selectedEnquiry.barcode && (
                       <div className="space-y-1">
-                        <span className="text-xs text-slate-500">Barcode</span>
-                        <p className="font-medium font-mono">{selectedEnquiry.barcode}</p>
+                        <span className="text-xs text-slate-500">Purchased Quantity</span>
+                        <p className="font-medium text-green-700">{selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity}</p>
                       </div>
-                    )}
-                  </>
-                )}
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500">Base Product Cost (w/o GST)</span>
+                        <p className="font-medium text-slate-800">₹ {formatPrice(baseSpent)}</p>
+                      </div>
+
+                      {parsedSubCosts.length > 0 && (
+                        <div className="col-span-2 space-y-2 bg-slate-50 p-3 rounded-lg border">
+                          <span className="text-xs font-semibold text-slate-700">Product Sub-Costing Breakdown:</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            {parsedSubCosts.map((sub, i) => (
+                              <div key={i} className="flex justify-between bg-white px-2 py-1.5 rounded border">
+                                <span className="text-slate-600">{sub.name}</span>
+                                <span className="font-semibold text-slate-900">₹ {formatPrice(sub.price)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Costing</span>
+                          <p className="text-xs text-slate-600">Base: ₹ {formatPrice(baseSpent)} {totalSub > 0 && `+ Sub-Costs: ₹ ${formatPrice(totalSub)}`}</p>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <p className="text-sm font-bold text-slate-900">₹ {formatPrice(totalCosting)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span></p>
+                          <p className="text-sm font-bold text-emerald-700">₹ {formatPrice(totalCosting * 1.18)} <span className="text-xs font-normal text-emerald-600">(w/ 18% GST)</span></p>
+                        </div>
+                      </div>
+
+                      {selectedEnquiry.serialNumber && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-slate-500">Serial Number</span>
+                          <p className="font-medium font-mono">{selectedEnquiry.serialNumber}</p>
+                        </div>
+                      )}
+                      {selectedEnquiry.barcode && (
+                        <div className="space-y-1">
+                          <span className="text-xs text-slate-500">Barcode</span>
+                          <p className="font-medium font-mono">{selectedEnquiry.barcode}</p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {selectedEnquiry.notes && (
                   <div className="col-span-2 space-y-1 pt-2">

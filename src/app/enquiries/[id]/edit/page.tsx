@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { CreatableCombobox } from '@/components/CreatableCombobox';
-import { Camera, Image as ImageIcon, ArrowDown, ArrowUp, Barcode, ScanText } from 'lucide-react';
+import { Camera, Image as ImageIcon, ArrowDown, ArrowUp, Barcode, ScanText, Trash2, Plus } from 'lucide-react';
 import { useEffect, Suspense, useState, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Vendor, MasterCategory, Brand, Enquiry } from '@/types';
@@ -121,8 +121,31 @@ function EnquiryForm() {
       });
       if (enquiry.barcode) setShowBarcode(true);
       if (enquiry.serialNumber) setShowSerial(true);
+      if (enquiry.subCosts) {
+        try {
+          setSubCosts(JSON.parse(enquiry.subCosts));
+        } catch {
+          setSubCosts([]);
+        }
+      }
     }
   }, [enquiry, reset]);
+
+  const [subCosts, setSubCosts] = useState<{ name: string; price: number }[]>([]);
+
+  const addSubCost = () => {
+    setSubCosts([...subCosts, { name: '', price: 0 }]);
+  };
+
+  const updateSubCost = (index: number, field: 'name' | 'price', value: string | number) => {
+    const updated = [...subCosts];
+    updated[index] = { ...updated[index], [field]: value };
+    setSubCosts(updated);
+  };
+
+  const removeSubCost = (index: number) => {
+    setSubCosts(subCosts.filter((_, i) => i !== index));
+  };
 
   const [showBarcode, setShowBarcode] = useState(false);
   const [showSerial, setShowSerial] = useState(false);
@@ -164,12 +187,18 @@ function EnquiryForm() {
   const estimatedTotalWithGst = Number((quantity * enquiryPriceWithGst).toFixed(2));
   const actualTotal = Number((purchaseQuantity * purchasePrice).toFixed(2));
   const actualTotalWithGst = Number((purchaseQuantity * purchasePriceWithGst).toFixed(2));
-  const priceDifference = Number(((actualTotal) - (estimatedTotal)).toFixed(2));
-  const percentageDifference = estimatedTotal > 0 ? ((actualTotal - estimatedTotal) / estimatedTotal) * 100 : 0;
+
+  const totalSubCosts = subCosts.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+  const overallTotalCost = Number((actualTotal + totalSubCosts).toFixed(2));
+  const overallTotalCostWithGst = Number(((actualTotal + totalSubCosts) * 1.18).toFixed(2));
+
+  const priceDifference = Number(((overallTotalCost) - (estimatedTotal)).toFixed(2));
+  const percentageDifference = estimatedTotal > 0 ? ((overallTotalCost - estimatedTotal) / estimatedTotal) * 100 : 0;
 
   const onSubmit = async (data: EnquiryFormValues) => {
     if (!enquiry) return;
     try {
+      const validSubCosts = subCosts.filter(s => s.name.trim() !== '');
       await updateEnquiry(enquiry.id, {
         date: data.date,
         productId: data.productId,
@@ -182,6 +211,7 @@ function EnquiryForm() {
         purchaseQuantity: data.isPurchased === 'YES' ? (data.purchaseQuantity || data.quantity) : null,
         serialNumber: data.isPurchased === 'YES' ? data.serialNumber : null,
         barcode: data.isPurchased === 'YES' ? data.barcode : null,
+        subCosts: data.isPurchased === 'YES' && validSubCosts.length > 0 ? JSON.stringify(validSubCosts) : null,
       } as any);
       
       toast({
@@ -488,7 +518,7 @@ function EnquiryForm() {
                     <div>
                       <p className="text-xs text-slate-500 mb-1">Difference</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">₹ {Math.abs(priceDifference).toLocaleString()}</span>
+                        <span className="text-lg font-bold">₹ {formatCurrency(Math.abs(priceDifference))}</span>
                         {priceDifference > 0 ? (
                           <span className="flex items-center text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded">
                             <ArrowUp className="w-3 h-3 mr-1" /> {percentageDifference.toFixed(1)}% INCREASE
@@ -504,6 +534,77 @@ function EnquiryForm() {
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+
+              {/* Product Sub-Costing & Total Costing Label */}
+              <div className="col-span-1 md:col-span-2 pt-4 border-t border-green-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-sm font-semibold text-slate-800">Product Sub-Costing / Accessories</Label>
+                    <p className="text-xs text-slate-500">Add sub-components or accessories (e.g. Mouse, Keyboard, CPU upgrade, etc.)</p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={addSubCost} className="text-xs bg-white text-green-700 hover:bg-green-50 border-green-300">
+                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Sub-Cost
+                  </Button>
+                </div>
+
+                {subCosts.length > 0 && (
+                  <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
+                    {subCosts.map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input 
+                          placeholder="Component name (e.g. Mouse, CPU, Bag...)" 
+                          value={item.name} 
+                          onChange={(e) => updateSubCost(idx, 'name', e.target.value)}
+                          className="flex-1 h-9 text-sm"
+                        />
+                        <div className="w-36 relative">
+                          <span className="absolute left-2.5 top-2 text-xs text-slate-500">₹</span>
+                          <Input 
+                            type="number"
+                            step="0.01"
+                            placeholder="0.00" 
+                            value={item.price || ''} 
+                            onChange={(e) => updateSubCost(idx, 'price', parseFloat(e.target.value) || 0)}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (!isNaN(val)) updateSubCost(idx, 'price', Number(val.toFixed(2)));
+                            }}
+                            className="pl-6 h-9 text-sm"
+                          />
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSubCost(idx)} className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Total Costing Label Banner */}
+                <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-xl shadow-sm">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Total Costing</span>
+                      <div className="mt-1 text-xs text-slate-600 space-y-0.5">
+                        <p>Base Product: <span className="font-semibold text-slate-800">₹ {formatCurrency(actualTotal)}</span> ({purchaseQuantity} × ₹{formatCurrency(purchasePrice)})</p>
+                        {totalSubCosts > 0 && (
+                          <p>Sub-Costing Total: <span className="font-semibold text-emerald-700">+ ₹ {formatCurrency(totalSubCosts)}</span></p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-6 sm:border-l sm:border-emerald-200 sm:pl-6">
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium">Grand Total Costing (w/o GST)</p>
+                        <p className="text-xl font-bold text-slate-900">₹ {formatCurrency(overallTotalCost)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500 font-medium">Grand Total Costing (w/ 18% GST)</p>
+                        <p className="text-xl font-bold text-emerald-700">₹ {formatCurrency(overallTotalCostWithGst)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

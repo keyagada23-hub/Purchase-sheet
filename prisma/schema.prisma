@@ -84,6 +84,7 @@ model Enquiry {
   user             User     @relation(fields: [userId], references: [id])
   status           String   @default("Open") // Open | Closed | Cancelled
   purchaseReason   String?  @db.Text
+  subCosts         String?  @db.Text
 }
 
 model ActivityLog {

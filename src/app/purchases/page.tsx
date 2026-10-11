@@ -123,14 +123,27 @@ export default function PurchasesPage() {
                   const product = products.find(p => p.id === purchase.productId);
                   const vendor = vendors.find(v => v.id === purchase.vendorId);
                   const purchaseQty = purchase.purchaseQuantity || purchase.quantity;
-                  const totalAmount = (purchase.purchasePrice || 0) * purchaseQty;
+                  const parsedSubCosts: { name: string; price: number }[] = (() => {
+                    if (!purchase.subCosts) return [];
+                    try { return JSON.parse(purchase.subCosts); } catch { return []; }
+                  })();
+                  const totalSubCosts = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                  const baseAmount = (purchase.purchasePrice || 0) * purchaseQty;
+                  const totalAmount = baseAmount + totalSubCosts;
                   const estimatedTotal = purchase.enquiryPrice * purchase.quantity;
                   const priceDiff = totalAmount - estimatedTotal;
                   
                   return (
                     <TableRow key={purchase.id} className="cursor-pointer hover:bg-slate-50" onClick={() => setSelectedPurchase(purchase)}>
                       <TableCell>{new Date(purchase.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-medium">{product?.name || 'Unknown'}</TableCell>
+                      <TableCell className="font-medium">
+                        {product?.name || 'Unknown'}
+                        {parsedSubCosts.length > 0 && (
+                          <span className="block text-xs font-normal text-slate-500">
+                            +{parsedSubCosts.length} accessory/sub-cost{parsedSubCosts.length > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>{vendor?.name || 'Unknown'}</TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1">
@@ -144,9 +157,9 @@ export default function PurchasesPage() {
                       <TableCell className="text-right font-medium text-blue-700">₹ {formatPrice(totalAmount * 1.18)}</TableCell>
                       <TableCell className="text-center">
                         {priceDiff > 0 ? (
-                          <span className="inline-flex items-center text-xs text-red-600"><ArrowUp className="w-3 h-3 mr-1"/> ₹{priceDiff.toLocaleString()}</span>
+                          <span className="inline-flex items-center text-xs text-red-600"><ArrowUp className="w-3 h-3 mr-1"/> ₹{formatPrice(priceDiff)}</span>
                         ) : priceDiff < 0 ? (
-                          <span className="inline-flex items-center text-xs text-green-600"><ArrowDown className="w-3 h-3 mr-1"/> ₹{Math.abs(priceDiff).toLocaleString()}</span>
+                          <span className="inline-flex items-center text-xs text-green-600"><ArrowDown className="w-3 h-3 mr-1"/> ₹{formatPrice(Math.abs(priceDiff))}</span>
                         ) : (
                           <span className="text-xs text-slate-400">Same</span>
                         )}
@@ -199,21 +212,56 @@ export default function PurchasesPage() {
                   <p className="font-medium text-blue-700">₹ {formatPrice(selectedPurchase.enquiryPrice * selectedPurchase.quantity * 1.18)}</p>
                 </div>
                 
-                <div className="col-span-2 border-t pt-4 mt-2">
-                  <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Purchased Quantity</span>
-                  <p className="font-medium text-green-700">{selectedPurchase.purchaseQuantity || selectedPurchase.quantity}</p>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Total Spent (w/o GST)</span>
-                  <p className="font-medium text-green-700">₹ {formatPrice((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity))}</p>
-                </div>
-                <div className="space-y-1">
-                  <span className="text-xs text-slate-500">Total Spent (w/ 18% GST)</span>
-                  <p className="font-medium text-green-700">₹ {formatPrice((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity) * 1.18)}</p>
-                </div>
+                {(() => {
+                  const parsedSubCosts: { name: string; price: number }[] = (() => {
+                    if (!selectedPurchase.subCosts) return [];
+                    try { return JSON.parse(selectedPurchase.subCosts); } catch { return []; }
+                  })();
+                  const totalSub = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                  const baseSpent = (selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity);
+                  const totalCosting = baseSpent + totalSub;
+
+                  return (
+                    <>
+                      <div className="col-span-2 border-t pt-4 mt-2">
+                        <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500">Purchased Quantity</span>
+                        <p className="font-medium text-green-700">{selectedPurchase.purchaseQuantity || selectedPurchase.quantity}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <span className="text-xs text-slate-500">Base Product Cost (w/o GST)</span>
+                        <p className="font-medium text-slate-800">₹ {formatPrice(baseSpent)}</p>
+                      </div>
+
+                      {parsedSubCosts.length > 0 && (
+                        <div className="col-span-2 space-y-2 bg-slate-50 p-3 rounded-lg border">
+                          <span className="text-xs font-semibold text-slate-700">Product Sub-Costing Breakdown:</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            {parsedSubCosts.map((sub, i) => (
+                              <div key={i} className="flex justify-between bg-white px-2 py-1.5 rounded border">
+                                <span className="text-slate-600">{sub.name}</span>
+                                <span className="font-semibold text-slate-900">₹ {formatPrice(sub.price)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Costing</span>
+                          <p className="text-xs text-slate-600">Base: ₹ {formatPrice(baseSpent)} {totalSub > 0 && `+ Sub-Costs: ₹ ${formatPrice(totalSub)}`}</p>
+                        </div>
+                        <div className="text-left sm:text-right">
+                          <p className="text-sm font-bold text-slate-900">₹ {formatPrice(totalCosting)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span></p>
+                          <p className="text-sm font-bold text-emerald-700">₹ {formatPrice(totalCosting * 1.18)} <span className="text-xs font-normal text-emerald-600">(w/ 18% GST)</span></p>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
                 
                 {selectedPurchase.serialNumber && (
                   <div className="space-y-1">

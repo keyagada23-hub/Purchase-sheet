@@ -44,6 +44,11 @@ export interface Vendor {
   status: 'Active' | 'Inactive';
 }
 
+export interface SubCostItem {
+  name: string;
+  price: number;
+}
+
 export interface Enquiry {
   id: string;
   date: string;
@@ -60,6 +65,7 @@ export interface Enquiry {
   userId: string;
   status: 'Open' | 'Closed' | 'Cancelled';
   purchaseReason?: string;
+  subCosts?: string; // JSON string of SubCostItem[]
 }
 
 export interface Brand {
