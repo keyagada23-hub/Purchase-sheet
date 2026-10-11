@@ -180,7 +180,8 @@ function EnquiryForm() {
         purchaseQuantity: data.isPurchased === 'YES' ? (data.purchaseQuantity || data.quantity) : null,
         serialNumber: data.isPurchased === 'YES' ? data.serialNumber : null,
         barcode: data.isPurchased === 'YES' ? data.barcode : null,
-        subCosts: data.isPurchased === 'YES' && validSubCosts.length > 0 ? JSON.stringify(validSubCosts) : null,
+        subCosts: validSubCosts.length > 0 ? JSON.stringify(validSubCosts) : null,
+        inTotalCosting: validSubCosts.length > 0,
       });
       
       toast({
@@ -379,6 +380,59 @@ function EnquiryForm() {
               <p className="text-2xl font-bold text-blue-700">₹ {formatCurrency(estimatedTotalWithGst)}</p>
             </div>
           </div>
+
+          {/* Sub-costing for Enquiry stage */}
+          {isPurchased === 'NO' && (
+            <div className="mt-4 pt-4 border-t space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm font-semibold text-slate-800">Product Sub-Costing / Accessories (Optional)</Label>
+                  <p className="text-xs text-slate-500">Add accessories (Mouse, CPU upgrade, etc.) to include in Total Costing</p>
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={addSubCost} className="text-xs bg-white text-indigo-700 hover:bg-indigo-50 border-indigo-300">
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Sub-Cost
+                </Button>
+              </div>
+
+              {subCosts.length > 0 && (
+                <div className="space-y-2 bg-slate-50 p-3 rounded-lg border">
+                  {subCosts.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input 
+                        placeholder="Component name (e.g. Mouse, CPU, Bag...)" 
+                        value={item.name} 
+                        onChange={(e) => updateSubCost(idx, 'name', e.target.value)}
+                        className="flex-1 h-9 text-sm bg-white"
+                      />
+                      <div className="w-36 relative">
+                        <span className="absolute left-2.5 top-2 text-xs text-slate-500">₹</span>
+                        <Input 
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00" 
+                          value={item.price || ''} 
+                          onChange={(e) => updateSubCost(idx, 'price', parseFloat(e.target.value) || 0)}
+                          onBlur={(e) => {
+                            const val = parseFloat(e.target.value);
+                            if (!isNaN(val)) updateSubCost(idx, 'price', Number(val.toFixed(2)));
+                          }}
+                          className="pl-6 h-9 text-sm bg-white"
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeSubCost(idx)} className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50">
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <div className="flex justify-between items-center text-xs font-semibold text-indigo-800 bg-indigo-50 p-2.5 rounded border border-indigo-200">
+                    <span>Total Costing with Accessories:</span>
+                    <span>₹ {formatCurrency(estimatedTotal + totalSubCosts)} (w/o GST) | ₹ {formatCurrency((estimatedTotal + totalSubCosts) * 1.18)} (w/ GST)</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="pt-6 border-t">
             <div className="space-y-4">

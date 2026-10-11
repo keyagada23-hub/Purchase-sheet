@@ -66,6 +66,7 @@ export interface Enquiry {
   status: 'Open' | 'Closed' | 'Cancelled';
   purchaseReason?: string;
   subCosts?: string | null; // JSON string of SubCostItem[]
+  inTotalCosting?: boolean;
 }
 
 export interface Brand {

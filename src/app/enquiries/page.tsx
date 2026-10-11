@@ -4,13 +4,13 @@ import { useAppStore } from '@/lib/store';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Trash, Check, X, Search, Edit } from 'lucide-react';
+import { Plus, Trash, Check, X, Search, Edit, Calculator } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
 import { Enquiry, Product, Vendor } from '@/types';
-import { getEnquiries, deleteEnquiry as deleteEnquiryAction } from '@/app/actions/enquiry';
+import { getEnquiries, deleteEnquiry as deleteEnquiryAction, toggleEnquiryTotalCosting } from '@/app/actions/enquiry';
 import { getProducts } from '@/app/actions/product';
 import { getVendors } from '@/app/actions/vendor';
 
@@ -113,17 +113,18 @@ export default function EnquiriesPage() {
                 <TableHead className="text-right">Total (w/o GST)</TableHead>
                 <TableHead className="text-right">Total (+18% GST)</TableHead>
                 <TableHead className="text-center">Purchased?</TableHead>
+                <TableHead className="text-center">Total Costing</TableHead>
                 {canEdit && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center py-8">Loading enquiries...</TableCell>
+                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8">Loading enquiries...</TableCell>
                 </TableRow>
               ) : filteredEnquiries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 8 : 7} className="text-center py-8">No enquiries found</TableCell>
+                  <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-8">No enquiries found</TableCell>
                 </TableRow>
               ) : (
                 filteredEnquiries.map((enquiry) => (
@@ -140,6 +141,40 @@ export default function EnquiriesPage() {
                       ) : (
                         <span className="inline-flex items-center text-slate-500 bg-slate-100 px-2 py-1 rounded-full text-xs font-medium"><X className="w-3 h-3 mr-1"/> No</span>
                       )}
+                    </TableCell>
+                    <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <input
+                          type="checkbox"
+                          checked={!!enquiry.inTotalCosting}
+                          onChange={async (e) => {
+                            const isChecked = e.target.checked;
+                            try {
+                              await toggleEnquiryTotalCosting(enquiry.id, isChecked);
+                              setEnquiries((prev) =>
+                                prev.map((item) => (item.id === enquiry.id ? { ...item, inTotalCosting: isChecked } : item))
+                              );
+                              if (isChecked) {
+                                router.push(`/total-costing?enquiryId=${enquiry.id}`);
+                              }
+                            } catch (err) {
+                              console.error('Failed to toggle total costing:', err);
+                            }
+                          }}
+                          className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
+                          title={enquiry.inTotalCosting ? 'Included in Total Costing (click to remove)' : 'Click to add to Total Costing & redirect'}
+                        />
+                        {enquiry.inTotalCosting && (
+                          <button
+                            type="button"
+                            onClick={() => router.push(`/total-costing?enquiryId=${enquiry.id}`)}
+                            title="Open in Total Costing"
+                            className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center ml-1"
+                          >
+                            View →
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     {canEdit && (
                       <TableCell className="text-right space-x-2" onClick={(e) => e.stopPropagation()}>
@@ -199,7 +234,8 @@ export default function EnquiriesPage() {
                   <p className="font-medium text-blue-700">₹ {formatPrice(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity * 1.18)}</p>
                 </div>
                 
-                {selectedEnquiry.isPurchased && (() => {
+                {/* Total Costing & Sub-Costs Breakdown Section */}
+                {(() => {
                   const parsedSubCosts: { name: string; price: number }[] = (() => {
                     if (!selectedEnquiry.subCosts) return [];
                     try {
@@ -209,26 +245,32 @@ export default function EnquiriesPage() {
                     }
                   })();
                   const totalSub = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                  const baseSpent = (selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity);
+                  const baseSpent = selectedEnquiry.isPurchased
+                    ? (selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity)
+                    : (selectedEnquiry.enquiryPrice || 0) * selectedEnquiry.quantity;
                   const totalCosting = baseSpent + totalSub;
 
                   return (
                     <>
-                      <div className="col-span-2 border-t pt-4 mt-2">
-                        <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs text-slate-500">Purchased Quantity</span>
-                        <p className="font-medium text-green-700">{selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <span className="text-xs text-slate-500">Base Product Cost (w/o GST)</span>
-                        <p className="font-medium text-slate-800">₹ {formatPrice(baseSpent)}</p>
-                      </div>
+                      {selectedEnquiry.isPurchased && (
+                        <>
+                          <div className="col-span-2 border-t pt-4 mt-2">
+                            <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-bold mb-2">PURCHASED</span>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-xs text-slate-500">Purchased Quantity</span>
+                            <p className="font-medium text-green-700">{selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity}</p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-xs text-slate-500">Base Product Cost (w/o GST)</span>
+                            <p className="font-medium text-slate-800">₹ {formatPrice(baseSpent)}</p>
+                          </div>
+                        </>
+                      )}
 
                       {parsedSubCosts.length > 0 && (
-                        <div className="col-span-2 space-y-2 bg-slate-50 p-3 rounded-lg border">
-                          <span className="text-xs font-semibold text-slate-700">Product Sub-Costing Breakdown:</span>
+                        <div className="col-span-2 space-y-2 bg-slate-50 p-3 rounded-lg border mt-2">
+                          <span className="text-xs font-semibold text-slate-700">Sub-Costing Breakdown (Accessories/Parts):</span>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             {parsedSubCosts.map((sub, i) => (
                               <div key={i} className="flex justify-between bg-white px-2 py-1.5 rounded border">
@@ -240,25 +282,47 @@ export default function EnquiriesPage() {
                         </div>
                       )}
 
-                      <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-2">
                         <div>
-                          <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Costing</span>
-                          <p className="text-xs text-slate-600">Base: ₹ {formatPrice(baseSpent)} {totalSub > 0 && `+ Sub-Costs: ₹ ${formatPrice(totalSub)}`}</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Costing</span>
+                            {selectedEnquiry.inTotalCosting && (
+                              <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold">IN TOTAL COSTING</span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-600 mt-0.5">
+                            Base: ₹ {formatPrice(baseSpent)} {totalSub > 0 && `+ Sub-Costs: ₹ ${formatPrice(totalSub)}`}
+                          </p>
                         </div>
-                        <div className="text-left sm:text-right">
-                          <p className="text-sm font-bold text-slate-900">₹ {formatPrice(totalCosting)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span></p>
-                          <p className="text-sm font-bold text-emerald-700">₹ {formatPrice(totalCosting * 1.18)} <span className="text-xs font-normal text-emerald-600">(w/ 18% GST)</span></p>
+                        <div className="flex items-center gap-3">
+                          <div className="text-left sm:text-right">
+                            <p className="text-sm font-bold text-slate-900">₹ {formatPrice(totalCosting)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span></p>
+                            <p className="text-sm font-bold text-emerald-700">₹ {formatPrice(totalCosting * 1.18)} <span className="text-xs font-normal text-emerald-600">(w/ 18% GST)</span></p>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
+                            onClick={async () => {
+                              if (!selectedEnquiry.inTotalCosting) {
+                                await toggleEnquiryTotalCosting(selectedEnquiry.id, true);
+                              }
+                              router.push(`/total-costing?enquiryId=${selectedEnquiry.id}`);
+                            }}
+                          >
+                            <Calculator className="h-3.5 w-3.5 mr-1" /> Open Costing →
+                          </Button>
                         </div>
                       </div>
 
                       {selectedEnquiry.serialNumber && (
-                        <div className="space-y-1">
+                        <div className="space-y-1 mt-2">
                           <span className="text-xs text-slate-500">Serial Number</span>
                           <p className="font-medium font-mono">{selectedEnquiry.serialNumber}</p>
                         </div>
                       )}
                       {selectedEnquiry.barcode && (
-                        <div className="space-y-1">
+                        <div className="space-y-1 mt-2">
                           <span className="text-xs text-slate-500">Barcode</span>
                           <p className="font-medium font-mono">{selectedEnquiry.barcode}</p>
                         </div>

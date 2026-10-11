@@ -85,6 +85,7 @@ model Enquiry {
   status           String   @default("Open") // Open | Closed | Cancelled
   purchaseReason   String?  @db.Text
   subCosts         String?  @db.Text
+  inTotalCosting   Boolean  @default(false)
 }
 
 model ActivityLog {

@@ -38,6 +38,16 @@ export async function updateEnquiry(id: string, data: Partial<Enquiry>): Promise
   return enquiry as Enquiry;
 }
 
+export async function toggleEnquiryTotalCosting(id: string, inTotalCosting: boolean): Promise<Enquiry> {
+  const enquiry = await prisma.enquiry.update({
+    where: { id },
+    data: { inTotalCosting },
+  });
+  revalidatePath('/enquiries');
+  revalidatePath('/total-costing');
+  return enquiry as Enquiry;
+}
+
 export async function deleteEnquiry(id: string): Promise<void> {
   await prisma.enquiry.delete({
     where: { id },
