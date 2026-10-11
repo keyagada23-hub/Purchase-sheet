@@ -108,8 +108,8 @@ export default function PurchasesPage() {
                 <TableHead>Vendor</TableHead>
                 <TableHead>Serial / Barcode</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
-                <TableHead className="text-right">Total (w/o GST)</TableHead>
-                <TableHead className="text-right text-blue-700">Total (+18% GST)</TableHead>
+                <TableHead className="text-right">Total Costing (w/o GST)</TableHead>
+                <TableHead className="text-right text-blue-700">Total Costing (+18% GST)</TableHead>
                 <TableHead className="text-center">vs Enquiry</TableHead>
               </TableRow>
             </TableHeader>

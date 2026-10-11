@@ -9,27 +9,31 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Product, Brand, MasterCategory } from '@/types';
+import { Product, Brand, MasterCategory, Enquiry } from '@/types';
 import { getProducts, deleteProduct as deleteProductAction } from '@/app/actions/product';
 import { getCategories, deleteCategory as deleteCategoryAction, updateCategory as updateCategoryAction, getBrands } from '@/app/actions/category';
+import { getEnquiries } from '@/app/actions/enquiry';
 
 export default function ProductsPage() {
   const { currentUser } = useAppStore();
   const [products, setProducts] = useState<Product[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [categories, setCategories] = useState<MasterCategory[]>([]);
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   
   useEffect(() => {
     async function loadData() {
       try {
-        const [fetchedProducts, fetchedBrands, fetchedCategories] = await Promise.all([
+        const [fetchedProducts, fetchedBrands, fetchedCategories, fetchedEnquiries] = await Promise.all([
           getProducts(),
           getBrands(),
-          getCategories()
+          getCategories(),
+          getEnquiries(),
         ]);
         setProducts(fetchedProducts);
         setBrands(fetchedBrands);
         setCategories(fetchedCategories);
+        setEnquiries(fetchedEnquiries);
       } catch (error) {
         console.error("Failed to load products data:", error);
       }
@@ -301,6 +305,74 @@ export default function ProductsPage() {
                 <span className="text-slate-500 font-medium">Brand</span>
                 <span className="col-span-2">{brands.find(b => b.id === selectedProduct.brandId)?.name || '-'}</span>
               </div>
+
+              {/* Product Purchase Costing & Sub-Costing */}
+              {(() => {
+                const productPurchases = enquiries.filter(e => e.productId === selectedProduct.id && e.isPurchased);
+                const latestPurchase = productPurchases[productPurchases.length - 1];
+                if (!latestPurchase) {
+                  return (
+                    <div className="border-t pt-3 mt-3">
+                      <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-1">Costing Status</span>
+                      <p className="text-xs text-slate-400 bg-slate-50 p-2.5 rounded border border-dashed">
+                        No purchase records yet. Create an enquiry and mark as purchased to see total costing and sub-components.
+                      </p>
+                    </div>
+                  );
+                }
+
+                const parsedSubCosts: { name: string; price: number }[] = (() => {
+                  if (!latestPurchase.subCosts) return [];
+                  try { return JSON.parse(latestPurchase.subCosts); } catch { return []; }
+                })();
+                const totalSub = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                const baseSpent = (latestPurchase.purchasePrice || 0) * (latestPurchase.purchaseQuantity || latestPurchase.quantity);
+                const totalCosting = baseSpent + totalSub;
+
+                return (
+                  <div className="border-t pt-3 mt-3 space-y-3">
+                    <span className="text-xs font-bold text-slate-700 uppercase tracking-wider block">
+                      Purchase Costing & Sub-Costing
+                    </span>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 p-2.5 rounded border">
+                      <div>
+                        <span className="text-slate-500 block">Base Price (w/o GST)</span>
+                        <span className="font-semibold text-slate-800">₹ {Number(baseSpent.toFixed(2)).toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 block">Purchased Qty</span>
+                        <span className="font-semibold text-slate-800">{latestPurchase.purchaseQuantity || latestPurchase.quantity}</span>
+                      </div>
+                    </div>
+
+                    {parsedSubCosts.length > 0 && (
+                      <div className="space-y-1.5 bg-slate-50 p-2.5 rounded border">
+                        <span className="text-[11px] font-semibold text-slate-600 block">Sub-Costing Accessories:</span>
+                        <div className="grid grid-cols-2 gap-1.5 text-xs">
+                          {parsedSubCosts.map((sub, i) => (
+                            <div key={i} className="flex justify-between bg-white px-2 py-1 rounded border">
+                              <span className="text-slate-600">{sub.name}</span>
+                              <span className="font-semibold text-slate-900">₹ {Number(sub.price.toFixed(2)).toLocaleString()}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block">Total Costing</span>
+                        <span className="text-[11px] text-slate-600">Base + Sub-costs</span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-slate-900">₹ {Number(totalCosting.toFixed(2)).toLocaleString()} <span className="text-[10px] font-normal text-slate-500">(w/o GST)</span></p>
+                        <p className="text-sm font-bold text-emerald-700">₹ {Number((totalCosting * 1.18).toFixed(2)).toLocaleString()} <span className="text-[10px] font-normal text-emerald-600">(+18% GST)</span></p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
             </div>
           )}
