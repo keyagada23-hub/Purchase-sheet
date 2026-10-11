@@ -80,12 +80,10 @@ function TotalCostingContent() {
     loadData();
   }, []);
 
-  // ONLY ENQUIRY PRODUCTS (unpurchased enquiries)
-  const enquiryRecords = useMemo(() => {
-    return enquiries.filter((e) => !e.isPurchased);
-  }, [enquiries]);
+  // ALL products in enquiry (purchased or not) can be added to total costing
+  const allEnquiryRecords = enquiries;
 
-  // Open dialog to add/edit cost of enquiry product
+  // Open dialog to add/edit cost of any enquiry product
   const handleOpenAddCost = (enquiry: Enquiry) => {
     setEditingEnquiry(enquiry);
     if (enquiry.subCosts) {
@@ -101,20 +99,20 @@ function TotalCostingContent() {
 
   // Auto-open dialog if redirected with ?enquiryId=xxx
   useEffect(() => {
-    if (paramEnquiryId && enquiryRecords.length > 0 && autoOpenedRef.current !== paramEnquiryId) {
-      const target = enquiryRecords.find((e) => e.id === paramEnquiryId);
+    if (paramEnquiryId && allEnquiryRecords.length > 0 && autoOpenedRef.current !== paramEnquiryId) {
+      const target = allEnquiryRecords.find((e) => e.id === paramEnquiryId);
       if (target) {
         autoOpenedRef.current = paramEnquiryId;
         handleOpenAddCost(target);
       }
     }
-  }, [paramEnquiryId, enquiryRecords]);
+  }, [paramEnquiryId, allEnquiryRecords]);
 
-  // Filtered enquiries based on showAllEnquiries toggle and search
-  const filteredEnquiries = useMemo(() => {
+  // Filtered records based on showAllEnquiries toggle, search, and category
+  const filteredRecords = useMemo(() => {
     const list = showAllEnquiries
-      ? enquiryRecords
-      : enquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
+      ? allEnquiryRecords
+      : allEnquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
 
     return list
       .filter((record) => {
@@ -145,16 +143,19 @@ function TotalCostingContent() {
         return matchesCategory && matchesSearch;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [enquiryRecords, showAllEnquiries, products, vendors, categories, brands, selectedCategory, searchTerm]);
+  }, [allEnquiryRecords, showAllEnquiries, products, vendors, categories, brands, selectedCategory, searchTerm]);
 
-  // Overall Statistics for enquiry products
+  // Overall Statistics for all enquiry products (purchased or not)
   const stats = useMemo(() => {
-    const activeList = enquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
+    const activeList = allEnquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
     let totalBase = 0;
     let totalAdded = 0;
 
     activeList.forEach((record) => {
-      const base = record.enquiryPrice * record.quantity;
+      const isPurchased = !!record.isPurchased;
+      const qty = isPurchased ? (record.purchaseQuantity || record.quantity || 1) : (record.quantity || 1);
+      const unitPrice = isPurchased ? (record.purchasePrice || record.enquiryPrice || 0) : (record.enquiryPrice || 0);
+      const base = unitPrice * qty;
       totalBase += base;
 
       if (record.subCosts) {
@@ -168,12 +169,12 @@ function TotalCostingContent() {
 
     return {
       count: activeList.length,
-      totalEnquiries: enquiryRecords.length,
+      totalEnquiries: allEnquiryRecords.length,
       totalBase,
       totalAdded,
       totalCost: totalBase + totalAdded,
     };
-  }, [enquiryRecords]);
+  }, [allEnquiryRecords]);
 
   // Toggle enquiry in Total Costing
   const handleToggleCosting = async (id: string, currentState: boolean) => {
@@ -228,7 +229,7 @@ function TotalCostingContent() {
 
       toast({
         title: 'Success',
-        description: 'Cost of enquiry product updated successfully.',
+        description: 'Cost updated successfully.',
       });
       setEditingEnquiry(null);
     } catch (error) {
@@ -253,10 +254,10 @@ function TotalCostingContent() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
               <Calculator className="h-6 w-6 text-indigo-600" />
-              Total Costing (Enquiry Products)
+              Total Costing
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              Add and manage the sub-costs of enquiry products (e.g. laptop with mouse, CPU, RAM, etc.).
+              Add and manage product costing for all enquiry products (purchased or not) with accessory breakdowns (e.g. mouse, CPU, RAM).
             </p>
           </div>
         </div>
@@ -266,7 +267,7 @@ function TotalCostingContent() {
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Costed Enquiry Products
+                Costed Products
               </CardTitle>
               <Package className="h-4 w-4 text-slate-400" />
             </CardHeader>
@@ -279,26 +280,26 @@ function TotalCostingContent() {
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Base Enquiry Cost
+                Base Product Cost
               </CardTitle>
               <Layers className="h-4 w-4 text-slate-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900">₹ {formatPrice(stats.totalBase)}</div>
-              <p className="text-xs text-slate-500 mt-1">Base product prices</p>
+              <p className="text-xs text-slate-500 mt-1">Main unit prices</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-                Added Product Costs
+                Added Sub-Costs
               </CardTitle>
               <Plus className="h-4 w-4 text-indigo-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-indigo-700">₹ {formatPrice(stats.totalAdded)}</div>
-              <p className="text-xs text-slate-500 mt-1">Accessories & sub-components</p>
+              <p className="text-xs text-slate-500 mt-1">Mouse, CPU & accessories added</p>
             </CardContent>
           </Card>
 
@@ -312,7 +313,7 @@ function TotalCostingContent() {
             <CardContent>
               <div className="text-2xl font-extrabold text-indigo-950">₹ {formatPrice(stats.totalCost)}</div>
               <p className="text-xs font-semibold text-indigo-700 mt-0.5">
-                Base + Added Costs
+                Base + Added Sub-Costs
               </p>
             </CardContent>
           </Card>
@@ -328,7 +329,7 @@ function TotalCostingContent() {
               onClick={() => setShowAllEnquiries(false)}
               className="text-xs h-8"
             >
-              Costed Enquiries ({stats.count})
+              Costed Products ({stats.count})
             </Button>
             <Button
               type="button"
@@ -345,7 +346,7 @@ function TotalCostingContent() {
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <Input
-                placeholder="Search enquiry products..."
+                placeholder="Search products, mouse, cpu..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 h-8 text-xs bg-slate-50"
@@ -367,17 +368,17 @@ function TotalCostingContent() {
           </div>
         </div>
 
-        {/* Enquiry Products Total Costing Table */}
+        {/* Total Costing Table */}
         <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
                 <TableHead className="w-14 text-center font-semibold text-slate-700">Costing</TableHead>
                 <TableHead className="font-semibold text-slate-700">Date</TableHead>
-                <TableHead className="font-semibold text-slate-700">Enquiry Product</TableHead>
+                <TableHead className="font-semibold text-slate-700">Product</TableHead>
                 <TableHead className="font-semibold text-slate-700">Vendor</TableHead>
                 <TableHead className="text-right font-semibold text-slate-700">Qty</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Enquiry Price</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Base Cost</TableHead>
                 <TableHead className="font-semibold text-slate-700">Added Costs (Sub-Costs)</TableHead>
                 <TableHead className="text-right font-semibold text-slate-700">Total Cost</TableHead>
                 {canEdit && <TableHead className="text-center font-semibold text-slate-700">Action</TableHead>}
@@ -387,29 +388,32 @@ function TotalCostingContent() {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-10 text-slate-500">
-                    Loading enquiry products...
+                    Loading products...
                   </TableCell>
                 </TableRow>
-              ) : filteredEnquiries.length === 0 ? (
+              ) : filteredRecords.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-12 text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Calculator className="h-8 w-8 text-slate-300" />
-                      <p className="font-medium text-slate-700">No enquiry products found</p>
+                      <p className="font-medium text-slate-700">No products found</p>
                       <p className="text-xs text-slate-400">
                         {showAllEnquiries
-                          ? 'No enquiries recorded yet.'
-                          : 'Click "All Enquiry Products" above or check the Total Costing checkbox in the Enquiries section.'}
+                          ? 'No products recorded in enquiries yet.'
+                          : 'Click "All Enquiry Products" above or check the Total Costing checkbox in Enquiries.'}
                       </p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEnquiries.map((record) => {
+                filteredRecords.map((record) => {
                   const product = products.find((p) => p.id === record.productId);
                   const vendor = vendors.find((v) => v.id === record.vendorId);
                   const brand = brands.find((b) => b.id === product?.brandId);
-                  const baseCost = record.enquiryPrice * record.quantity;
+                  const isPurchased = !!record.isPurchased;
+                  const qty = isPurchased ? (record.purchaseQuantity || record.quantity || 1) : (record.quantity || 1);
+                  const unitPrice = isPurchased ? (record.purchasePrice || record.enquiryPrice || 0) : (record.enquiryPrice || 0);
+                  const baseCost = unitPrice * qty;
 
                   const parsedSubCosts: SubCostItem[] = (() => {
                     if (!record.subCosts) return [];
@@ -447,10 +451,21 @@ function TotalCostingContent() {
                         {new Date(record.date).toLocaleDateString()}
                       </TableCell>
 
-                      {/* Product */}
+                      {/* Product & Details with status badge */}
                       <TableCell className="align-top py-3">
-                        <div className="space-y-0.5">
-                          <p className="font-semibold text-slate-900">{product?.name || 'Unknown'}</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-slate-900">{product?.name || 'Unknown'}</p>
+                            {isPurchased ? (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                                Purchased
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                                Enquiry
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5 text-xs text-slate-500">
                             {brand?.name && <span className="text-slate-600 font-medium">{brand.name}</span>}
                             {product?.model && <span className="font-mono text-slate-500">({product.model})</span>}
@@ -465,13 +480,13 @@ function TotalCostingContent() {
 
                       {/* Qty */}
                       <TableCell className="align-top py-3 text-right font-medium text-slate-700">
-                        {record.quantity}
+                        {qty}
                       </TableCell>
 
-                      {/* Base Enquiry Price */}
+                      {/* Base Cost */}
                       <TableCell className="align-top py-3 text-right">
                         <p className="font-semibold text-slate-900">₹ {formatPrice(baseCost)}</p>
-                        <p className="text-[11px] text-slate-400">@{formatPrice(record.enquiryPrice)}/unit</p>
+                        <p className="text-[11px] text-slate-400">@{formatPrice(unitPrice)}/unit</p>
                       </TableCell>
 
                       {/* Added Costs / Sub-Costs */}
@@ -530,7 +545,10 @@ function TotalCostingContent() {
         <Dialog open={!!editingEnquiry} onOpenChange={(open) => !open && setEditingEnquiry(null)}>
           {editingEnquiry && (() => {
             const product = products.find((p) => p.id === editingEnquiry.productId);
-            const baseSpent = editingEnquiry.enquiryPrice * editingEnquiry.quantity;
+            const isPurchased = !!editingEnquiry.isPurchased;
+            const qty = isPurchased ? (editingEnquiry.purchaseQuantity || editingEnquiry.quantity || 1) : (editingEnquiry.quantity || 1);
+            const unitPrice = isPurchased ? (editingEnquiry.purchasePrice || editingEnquiry.enquiryPrice || 0) : (editingEnquiry.enquiryPrice || 0);
+            const baseSpent = unitPrice * qty;
             const currentSubSum = costItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
             const totalCost = baseSpent + currentSubSum;
 
@@ -539,7 +557,7 @@ function TotalCostingContent() {
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-lg">
                     <Calculator className="h-5 w-5 text-indigo-600" />
-                    Add Cost of Enquiry Product
+                    Add Cost of Product
                   </DialogTitle>
                   <DialogDescription>
                     Add sub-costs for <strong>{product?.name}</strong> (e.g. mouse, CPU, charger, warranty).
@@ -550,9 +568,20 @@ function TotalCostingContent() {
                   {/* Base Product Info */}
                   <div className="bg-slate-50 p-3 rounded-lg border text-sm flex justify-between items-center">
                     <div>
-                      <p className="font-semibold text-slate-900">{product?.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-slate-900">{product?.name}</p>
+                        {isPurchased ? (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800">
+                            Purchased
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                            Enquiry
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Enquiry: {editingEnquiry.quantity} unit(s) × ₹{formatPrice(editingEnquiry.enquiryPrice)}
+                        Base: {qty} unit(s) × ₹{formatPrice(unitPrice)}
                       </p>
                     </div>
                     <div className="text-right">
