@@ -71,7 +71,7 @@ export default function NewVendorPage() {
     try {
       await createVendor({
         name: data.name,
-        categoryId: data.categoryId,
+        categoryId: data.categoryId || '',
         phone: data.phone || '',
         email: data.email || '',
         address: data.address || '',

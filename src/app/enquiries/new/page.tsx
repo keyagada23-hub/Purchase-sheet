@@ -128,11 +128,18 @@ function EnquiryForm() {
   const selectedProduct = products.find(p => p.id === selectedProductId);
   const selectedVendor = vendors.find(v => v.id === selectedVendorId);
 
-  const estimatedTotal = quantity * enquiryPrice;
-  const estimatedTotalWithGst = quantity * enquiryPriceWithGst;
-  const actualTotal = purchaseQuantity * purchasePrice;
-  const actualTotalWithGst = purchaseQuantity * purchasePriceWithGst;
-  const priceDifference = (actualTotal) - (estimatedTotal);
+  const formatCurrency = (val: number) => {
+    return Number((val || 0).toFixed(2)).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  const estimatedTotal = Number((quantity * enquiryPrice).toFixed(2));
+  const estimatedTotalWithGst = Number((quantity * enquiryPriceWithGst).toFixed(2));
+  const actualTotal = Number((purchaseQuantity * purchasePrice).toFixed(2));
+  const actualTotalWithGst = Number((purchaseQuantity * purchasePriceWithGst).toFixed(2));
+  const priceDifference = Number(((actualTotal) - (estimatedTotal)).toFixed(2));
   const percentageDifference = estimatedTotal > 0 ? ((actualTotal - estimatedTotal) / estimatedTotal) * 100 : 0;
 
   const onSubmit = async (data: EnquiryFormValues) => {
@@ -142,12 +149,12 @@ function EnquiryForm() {
         productId: data.productId,
         vendorId: data.vendorId,
         quantity: data.quantity,
-        enquiryPrice: data.enquiryPrice,
+        enquiryPrice: Number(data.enquiryPrice.toFixed(2)),
         isPurchased: data.isPurchased === 'YES',
         userId: currentUser?.id || 'unknown',
         notes: data.notes || '',
         status: 'Open',
-        purchasePrice: data.isPurchased === 'YES' ? data.purchasePrice : null,
+        purchasePrice: data.isPurchased === 'YES' && data.purchasePrice !== undefined ? Number(data.purchasePrice.toFixed(2)) : null,
         purchaseQuantity: data.isPurchased === 'YES' ? (data.purchaseQuantity || data.quantity) : null,
         serialNumber: data.isPurchased === 'YES' ? data.serialNumber : null,
         barcode: data.isPurchased === 'YES' ? data.barcode : null,
@@ -298,6 +305,14 @@ function EnquiryForm() {
                   onChange: (e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setValue('enquiryPriceWithGst', Number((val * 1.18).toFixed(2)));
+                  },
+                  onBlur: (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      const rounded = Number(val.toFixed(2));
+                      setValue('enquiryPrice', rounded);
+                      setValue('enquiryPriceWithGst', Number((rounded * 1.18).toFixed(2)));
+                    }
                   }
                 })} 
               />
@@ -316,6 +331,14 @@ function EnquiryForm() {
                   onChange: (e) => {
                     const val = parseFloat(e.target.value) || 0;
                     setValue('enquiryPrice', Number((val / 1.18).toFixed(2)));
+                  },
+                  onBlur: (e) => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) {
+                      const rounded = Number(val.toFixed(2));
+                      setValue('enquiryPriceWithGst', rounded);
+                      setValue('enquiryPrice', Number((rounded / 1.18).toFixed(2)));
+                    }
                   }
                 })} 
               />
@@ -326,11 +349,11 @@ function EnquiryForm() {
           <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-slate-50 border rounded-xl shadow-sm">
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Grand Total (Without GST)</p>
-              <p className="text-2xl font-bold text-slate-900">₹ {estimatedTotal.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-slate-900">₹ {formatCurrency(estimatedTotal)}</p>
             </div>
             <div className="md:border-l md:pl-6 pt-4 md:pt-0 border-t md:border-t-0">
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Grand Total (With 18% GST)</p>
-              <p className="text-2xl font-bold text-blue-700">₹ {estimatedTotalWithGst.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-blue-700">₹ {formatCurrency(estimatedTotalWithGst)}</p>
             </div>
           </div>
 
@@ -387,6 +410,14 @@ function EnquiryForm() {
                       onChange: (e) => {
                         const val = parseFloat(e.target.value) || 0;
                         setValue('purchasePriceWithGst', Number((val * 1.18).toFixed(2)));
+                      },
+                      onBlur: (e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          const rounded = Number(val.toFixed(2));
+                          setValue('purchasePrice', rounded);
+                          setValue('purchasePriceWithGst', Number((rounded * 1.18).toFixed(2)));
+                        }
                       }
                     })} 
                   />
@@ -404,6 +435,14 @@ function EnquiryForm() {
                       onChange: (e) => {
                         const val = parseFloat(e.target.value) || 0;
                         setValue('purchasePrice', Number((val / 1.18).toFixed(2)));
+                      },
+                      onBlur: (e) => {
+                        const val = parseFloat(e.target.value);
+                        if (!isNaN(val)) {
+                          const rounded = Number(val.toFixed(2));
+                          setValue('purchasePriceWithGst', rounded);
+                          setValue('purchasePrice', Number((rounded / 1.18).toFixed(2)));
+                        }
                       }
                     })} 
                   />
@@ -412,10 +451,10 @@ function EnquiryForm() {
 
                 <div className="pt-2">
                   <p className="text-sm font-medium mt-1 text-green-700">
-                    Grand Total (w/o GST): ₹ {actualTotal.toLocaleString()}
+                    Grand Total (w/o GST): ₹ {formatCurrency(actualTotal)}
                   </p>
                   <p className="text-sm font-medium mt-1 text-green-800">
-                    Grand Total (w/ 18% GST): ₹ {actualTotalWithGst.toLocaleString()}
+                    Grand Total (w/ 18% GST): ₹ {formatCurrency(actualTotalWithGst)}
                   </p>
                 </div>
               </div>
@@ -441,7 +480,7 @@ function EnquiryForm() {
                     <div>
                       <p className="text-xs text-slate-500 mb-1">Difference</p>
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold">₹ {Math.abs(priceDifference).toLocaleString()}</span>
+                        <span className="text-lg font-bold">₹ {formatCurrency(Math.abs(priceDifference))}</span>
                         {priceDifference > 0 ? (
                           <span className="flex items-center text-xs font-medium text-red-600 bg-red-100 px-2 py-1 rounded">
                             <ArrowUp className="w-3 h-3 mr-1" /> {percentageDifference.toFixed(1)}% INCREASE

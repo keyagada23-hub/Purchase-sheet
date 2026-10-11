@@ -14,6 +14,13 @@ import { getEnquiries } from '@/app/actions/enquiry';
 import { getProducts } from '@/app/actions/product';
 import { getVendors } from '@/app/actions/vendor';
 
+const formatPrice = (price: number) => {
+  return Number((price || 0).toFixed(2)).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+};
+
 export default function PurchasesPage() {
   const { currentUser } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,8 +140,8 @@ export default function PurchasesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">{purchaseQty}</TableCell>
-                      <TableCell className="text-right">₹ {totalAmount.toLocaleString()}</TableCell>
-                      <TableCell className="text-right font-medium text-blue-700">₹ {(totalAmount * 1.18).toLocaleString()}</TableCell>
+                      <TableCell className="text-right">₹ {formatPrice(totalAmount)}</TableCell>
+                      <TableCell className="text-right font-medium text-blue-700">₹ {formatPrice(totalAmount * 1.18)}</TableCell>
                       <TableCell className="text-center">
                         {priceDiff > 0 ? (
                           <span className="inline-flex items-center text-xs text-red-600"><ArrowUp className="w-3 h-3 mr-1"/> ₹{priceDiff.toLocaleString()}</span>
@@ -185,11 +192,11 @@ export default function PurchasesPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Estimated Total (w/o GST)</span>
-                  <p className="font-medium">₹ {(selectedPurchase.enquiryPrice * selectedPurchase.quantity).toLocaleString()}</p>
+                  <p className="font-medium">₹ {formatPrice(selectedPurchase.enquiryPrice * selectedPurchase.quantity)}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Estimated Total (w/ 18% GST)</span>
-                  <p className="font-medium text-blue-700">₹ {(selectedPurchase.enquiryPrice * selectedPurchase.quantity * 1.18).toLocaleString()}</p>
+                  <p className="font-medium text-blue-700">₹ {formatPrice(selectedPurchase.enquiryPrice * selectedPurchase.quantity * 1.18)}</p>
                 </div>
                 
                 <div className="col-span-2 border-t pt-4 mt-2">
@@ -201,11 +208,11 @@ export default function PurchasesPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Total Spent (w/o GST)</span>
-                  <p className="font-medium text-green-700">₹ {((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity)).toLocaleString()}</p>
+                  <p className="font-medium text-green-700">₹ {formatPrice((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity))}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Total Spent (w/ 18% GST)</span>
-                  <p className="font-medium text-green-700">₹ {((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity) * 1.18).toLocaleString()}</p>
+                  <p className="font-medium text-green-700">₹ {formatPrice((selectedPurchase.purchasePrice || 0) * (selectedPurchase.purchaseQuantity || selectedPurchase.quantity) * 1.18)}</p>
                 </div>
                 
                 {selectedPurchase.serialNumber && (

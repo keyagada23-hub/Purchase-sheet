@@ -67,7 +67,7 @@ export async function deleteModel(categoryId: string, brandId: string, modelName
       brandId, 
       model: modelName 
     },
-    data: { model: null }
+    data: { model: '' }
   });
   revalidatePath('/products');
   revalidatePath('/products/new');

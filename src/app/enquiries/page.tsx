@@ -14,6 +14,13 @@ import { getEnquiries, deleteEnquiry as deleteEnquiryAction } from '@/app/action
 import { getProducts } from '@/app/actions/product';
 import { getVendors } from '@/app/actions/vendor';
 
+const formatPrice = (price: number) => {
+  return Number((price || 0).toFixed(2)).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+};
+
 export default function EnquiriesPage() {
   const { currentUser } = useAppStore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -125,8 +132,8 @@ export default function EnquiriesPage() {
                     <TableCell className="font-medium">{products.find(p => p.id === enquiry.productId)?.name || 'Unknown'}</TableCell>
                     <TableCell>{vendors.find(v => v.id === enquiry.vendorId)?.name || 'Unknown'}</TableCell>
                     <TableCell className="text-right">{enquiry.quantity}</TableCell>
-                    <TableCell className="text-right">₹ {(enquiry.enquiryPrice * enquiry.quantity).toLocaleString()}</TableCell>
-                    <TableCell className="text-right font-medium text-blue-700">₹ {(enquiry.enquiryPrice * enquiry.quantity * 1.18).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">₹ {formatPrice(enquiry.enquiryPrice * enquiry.quantity)}</TableCell>
+                    <TableCell className="text-right font-medium text-blue-700">₹ {formatPrice(enquiry.enquiryPrice * enquiry.quantity * 1.18)}</TableCell>
                     <TableCell className="text-center">
                       {enquiry.isPurchased ? (
                         <span className="inline-flex items-center text-green-600 bg-green-50 px-2 py-1 rounded-full text-xs font-medium"><Check className="w-3 h-3 mr-1"/> Yes</span>
@@ -185,11 +192,11 @@ export default function EnquiriesPage() {
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Grand Total (w/o GST)</span>
-                  <p className="font-medium">₹ {(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity).toLocaleString()}</p>
+                  <p className="font-medium">₹ {formatPrice(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity)}</p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs text-slate-500">Grand Total (w/ 18% GST)</span>
-                  <p className="font-medium text-blue-700">₹ {(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity * 1.18).toLocaleString()}</p>
+                  <p className="font-medium text-blue-700">₹ {formatPrice(selectedEnquiry.enquiryPrice * selectedEnquiry.quantity * 1.18)}</p>
                 </div>
                 
                 {selectedEnquiry.isPurchased && (
@@ -203,11 +210,11 @@ export default function EnquiriesPage() {
                     </div>
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500">Total Spent (w/o GST)</span>
-                      <p className="font-medium text-green-700">₹ {((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity)).toLocaleString()}</p>
+                      <p className="font-medium text-green-700">₹ {formatPrice((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity))}</p>
                     </div>
                     <div className="space-y-1">
                       <span className="text-xs text-slate-500">Total Spent (w/ 18% GST)</span>
-                      <p className="font-medium text-green-700">₹ {((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity) * 1.18).toLocaleString()}</p>
+                      <p className="font-medium text-green-700">₹ {formatPrice((selectedEnquiry.purchasePrice || 0) * (selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity) * 1.18)}</p>
                     </div>
                     {selectedEnquiry.serialNumber && (
                       <div className="space-y-1">

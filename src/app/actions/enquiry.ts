@@ -11,7 +11,11 @@ export async function getEnquiries(): Promise<Enquiry[]> {
 
 export async function createEnquiry(data: Omit<Enquiry, 'id'>): Promise<Enquiry> {
   const enquiry = await prisma.enquiry.create({
-    data,
+    data: {
+      ...data,
+      enquiryPrice: Number(data.enquiryPrice.toFixed(2)),
+      purchasePrice: data.purchasePrice !== undefined && data.purchasePrice !== null ? Number(data.purchasePrice.toFixed(2)) : null,
+    },
   });
   revalidatePath('/enquiries');
   revalidatePath('/enquiries/new');
@@ -19,9 +23,16 @@ export async function createEnquiry(data: Omit<Enquiry, 'id'>): Promise<Enquiry>
 }
 
 export async function updateEnquiry(id: string, data: Partial<Enquiry>): Promise<Enquiry> {
+  const cleanData: any = { ...data };
+  if (cleanData.enquiryPrice !== undefined && cleanData.enquiryPrice !== null) {
+    cleanData.enquiryPrice = Number(cleanData.enquiryPrice.toFixed(2));
+  }
+  if (cleanData.purchasePrice !== undefined && cleanData.purchasePrice !== null) {
+    cleanData.purchasePrice = Number(cleanData.purchasePrice.toFixed(2));
+  }
   const enquiry = await prisma.enquiry.update({
     where: { id },
-    data,
+    data: cleanData,
   });
   revalidatePath('/enquiries');
   return enquiry as Enquiry;
