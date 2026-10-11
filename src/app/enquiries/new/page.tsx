@@ -128,22 +128,6 @@ function EnquiryForm() {
   const selectedProduct = products.find(p => p.id === selectedProductId);
   const selectedVendor = vendors.find(v => v.id === selectedVendorId);
 
-  const [subCosts, setSubCosts] = useState<{ name: string; price: number }[]>([]);
-
-  const addSubCost = () => {
-    setSubCosts([...subCosts, { name: '', price: 0 }]);
-  };
-
-  const updateSubCost = (index: number, field: 'name' | 'price', value: string | number) => {
-    const updated = [...subCosts];
-    updated[index] = { ...updated[index], [field]: value };
-    setSubCosts(updated);
-  };
-
-  const removeSubCost = (index: number) => {
-    setSubCosts(subCosts.filter((_, i) => i !== index));
-  };
-
   const formatCurrency = (val: number) => {
     return Number((val || 0).toFixed(2)).toLocaleString(undefined, {
       minimumFractionDigits: 0,
@@ -156,16 +140,11 @@ function EnquiryForm() {
   const actualTotal = Number((purchaseQuantity * purchasePrice).toFixed(2));
   const actualTotalWithGst = Number((purchaseQuantity * purchasePriceWithGst).toFixed(2));
 
-  const totalSubCosts = subCosts.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-  const overallTotalCost = Number((actualTotal + totalSubCosts).toFixed(2));
-  const overallTotalCostWithGst = Number(((actualTotal + totalSubCosts) * 1.18).toFixed(2));
-
-  const priceDifference = Number(((overallTotalCost) - (estimatedTotal)).toFixed(2));
-  const percentageDifference = estimatedTotal > 0 ? ((overallTotalCost - estimatedTotal) / estimatedTotal) * 100 : 0;
+  const priceDifference = Number((actualTotal - estimatedTotal).toFixed(2));
+  const percentageDifference = estimatedTotal > 0 ? ((actualTotal - estimatedTotal) / estimatedTotal) * 100 : 0;
 
   const onSubmit = async (data: EnquiryFormValues) => {
     try {
-      const validSubCosts = subCosts.filter(s => s.name.trim() !== '');
       await createEnquiry({
         date: data.date,
         productId: data.productId,
@@ -180,8 +159,6 @@ function EnquiryForm() {
         purchaseQuantity: data.isPurchased === 'YES' ? (data.purchaseQuantity || data.quantity) : null,
         serialNumber: data.isPurchased === 'YES' ? data.serialNumber : null,
         barcode: data.isPurchased === 'YES' ? data.barcode : null,
-        subCosts: validSubCosts.length > 0 ? JSON.stringify(validSubCosts) : null,
-        inTotalCosting: validSubCosts.length > 0,
       });
       
       toast({
@@ -381,58 +358,7 @@ function EnquiryForm() {
             </div>
           </div>
 
-          {/* Sub-costing for Enquiry stage */}
-          {isPurchased === 'NO' && (
-            <div className="mt-4 pt-4 border-t space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label className="text-sm font-semibold text-slate-800">Product Sub-Costing / Accessories (Optional)</Label>
-                  <p className="text-xs text-slate-500">Add accessories (Mouse, CPU upgrade, etc.) to include in Total Costing</p>
-                </div>
-                <Button type="button" variant="outline" size="sm" onClick={addSubCost} className="text-xs bg-white text-indigo-700 hover:bg-indigo-50 border-indigo-300">
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Sub-Cost
-                </Button>
-              </div>
 
-              {subCosts.length > 0 && (
-                <div className="space-y-2 bg-slate-50 p-3 rounded-lg border">
-                  {subCosts.map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <Input 
-                        placeholder="Component name (e.g. Mouse, CPU, Bag...)" 
-                        value={item.name} 
-                        onChange={(e) => updateSubCost(idx, 'name', e.target.value)}
-                        className="flex-1 h-9 text-sm bg-white"
-                      />
-                      <div className="w-36 relative">
-                        <span className="absolute left-2.5 top-2 text-xs text-slate-500">₹</span>
-                        <Input 
-                          type="number"
-                          step="0.01"
-                          placeholder="0.00" 
-                          value={item.price || ''} 
-                          onChange={(e) => updateSubCost(idx, 'price', parseFloat(e.target.value) || 0)}
-                          onBlur={(e) => {
-                            const val = parseFloat(e.target.value);
-                            if (!isNaN(val)) updateSubCost(idx, 'price', Number(val.toFixed(2)));
-                          }}
-                          className="pl-6 h-9 text-sm bg-white"
-                        />
-                      </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeSubCost(idx)} className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  
-                  <div className="flex justify-between items-center text-xs font-semibold text-indigo-800 bg-indigo-50 p-2.5 rounded border border-indigo-200">
-                    <span>Total Costing with Accessories:</span>
-                    <span>₹ {formatCurrency(estimatedTotal + totalSubCosts)} (w/o GST) | ₹ {formatCurrency((estimatedTotal + totalSubCosts) * 1.18)} (w/ GST)</span>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="pt-6 border-t">
             <div className="space-y-4">
@@ -575,76 +501,7 @@ function EnquiryForm() {
                 </Card>
               </div>
 
-              {/* Product Sub-Costing & Total Costing Label */}
-              <div className="col-span-1 md:col-span-2 pt-4 border-t border-green-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label className="text-sm font-semibold text-slate-800">Product Sub-Costing / Accessories</Label>
-                    <p className="text-xs text-slate-500">Add sub-components or accessories (e.g. Mouse, Keyboard, CPU upgrade, etc.)</p>
-                  </div>
-                  <Button type="button" variant="outline" size="sm" onClick={addSubCost} className="text-xs bg-white text-green-700 hover:bg-green-50 border-green-300">
-                    <Plus className="w-3.5 h-3.5 mr-1" /> Add Sub-Cost
-                  </Button>
-                </div>
 
-                {subCosts.length > 0 && (
-                  <div className="space-y-2 bg-white p-3 rounded-lg border border-green-200">
-                    {subCosts.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <Input 
-                          placeholder="Component name (e.g. Mouse, CPU, Bag...)" 
-                          value={item.name} 
-                          onChange={(e) => updateSubCost(idx, 'name', e.target.value)}
-                          className="flex-1 h-9 text-sm"
-                        />
-                        <div className="w-36 relative">
-                          <span className="absolute left-2.5 top-2 text-xs text-slate-500">₹</span>
-                          <Input 
-                            type="number"
-                            step="0.01"
-                            placeholder="0.00" 
-                            value={item.price || ''} 
-                            onChange={(e) => updateSubCost(idx, 'price', parseFloat(e.target.value) || 0)}
-                            onBlur={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (!isNaN(val)) updateSubCost(idx, 'price', Number(val.toFixed(2)));
-                            }}
-                            className="pl-6 h-9 text-sm"
-                          />
-                        </div>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSubCost(idx)} className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Total Costing Label Banner */}
-                <div className="bg-emerald-50/80 border border-emerald-200 p-4 rounded-xl shadow-sm">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">Total Costing</span>
-                      <div className="mt-1 text-xs text-slate-600 space-y-0.5">
-                        <p>Base Product: <span className="font-semibold text-slate-800">₹ {formatCurrency(actualTotal)}</span> ({purchaseQuantity} × ₹{formatCurrency(purchasePrice)})</p>
-                        {totalSubCosts > 0 && (
-                          <p>Sub-Costing Total: <span className="font-semibold text-emerald-700">+ ₹ {formatCurrency(totalSubCosts)}</span></p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-6 sm:border-l sm:border-emerald-200 sm:pl-6">
-                      <div>
-                        <p className="text-xs text-slate-500 font-medium">Grand Total Costing (w/o GST)</p>
-                        <p className="text-xl font-bold text-slate-900">₹ {formatCurrency(overallTotalCost)}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-slate-500 font-medium">Grand Total Costing (w/ 18% GST)</p>
-                        <p className="text-xl font-bold text-emerald-700">₹ {formatCurrency(overallTotalCostWithGst)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           )}
           {isPurchased === 'YES' && (

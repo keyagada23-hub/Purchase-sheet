@@ -262,57 +262,33 @@ export default function EnquiriesPage() {
                             <p className="font-medium text-green-700">{selectedEnquiry.purchaseQuantity || selectedEnquiry.quantity}</p>
                           </div>
                           <div className="space-y-1">
-                            <span className="text-xs text-slate-500">Base Product Cost (w/o GST)</span>
+                            <span className="text-xs text-slate-500">Base Purchase Price</span>
                             <p className="font-medium text-slate-800">₹ {formatPrice(baseSpent)}</p>
                           </div>
                         </>
                       )}
 
-                      {parsedSubCosts.length > 0 && (
-                        <div className="col-span-2 space-y-2 bg-slate-50 p-3 rounded-lg border mt-2">
-                          <span className="text-xs font-semibold text-slate-700">Sub-Costing Breakdown (Accessories/Parts):</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            {parsedSubCosts.map((sub, i) => (
-                              <div key={i} className="flex justify-between bg-white px-2 py-1.5 rounded border">
-                                <span className="text-slate-600">{sub.name}</span>
-                                <span className="font-semibold text-slate-900">₹ {formatPrice(sub.price)}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="col-span-2 bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-2">
+                      <div className="col-span-2 border-t pt-3 flex justify-between items-center mt-2">
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Total Costing</span>
-                            {selectedEnquiry.inTotalCosting && (
-                              <span className="text-[10px] bg-emerald-200 text-emerald-900 px-1.5 py-0.5 rounded font-bold">IN TOTAL COSTING</span>
-                            )}
-                          </div>
-                          <p className="text-xs text-slate-600 mt-0.5">
-                            Base: ₹ {formatPrice(baseSpent)} {totalSub > 0 && `+ Sub-Costs: ₹ ${formatPrice(totalSub)}`}
+                          <span className="text-xs font-semibold text-slate-700">Total Costing</span>
+                          <p className="text-xs text-slate-500">
+                            {selectedEnquiry.inTotalCosting ? 'Included in Total Costing' : 'Click to open and add cost in Total Costing'}
                           </p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-left sm:text-right">
-                            <p className="text-sm font-bold text-slate-900">₹ {formatPrice(totalCosting)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span></p>
-                            <p className="text-sm font-bold text-emerald-700">₹ {formatPrice(totalCosting * 1.18)} <span className="text-xs font-normal text-emerald-600">(w/ 18% GST)</span></p>
-                          </div>
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8"
-                            onClick={async () => {
-                              if (!selectedEnquiry.inTotalCosting) {
-                                await toggleEnquiryTotalCosting(selectedEnquiry.id, true);
-                              }
-                              router.push(`/total-costing?enquiryId=${selectedEnquiry.id}`);
-                            }}
-                          >
-                            <Calculator className="h-3.5 w-3.5 mr-1" /> Open Costing →
-                          </Button>
-                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="text-xs text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                          onClick={async () => {
+                            if (!selectedEnquiry.inTotalCosting) {
+                              await toggleEnquiryTotalCosting(selectedEnquiry.id, true);
+                            }
+                            router.push(`/total-costing?enquiryId=${selectedEnquiry.id}`);
+                          }}
+                        >
+                          <Calculator className="h-3.5 w-3.5 mr-1" /> Open in Total Costing →
+                        </Button>
                       </div>
 
                       {selectedEnquiry.serialNumber && (

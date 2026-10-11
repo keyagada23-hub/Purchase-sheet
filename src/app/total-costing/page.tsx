@@ -5,10 +5,9 @@ import { useAppStore } from '@/lib/store';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Search, Plus, Trash2, Edit, Calculator, Package, Layers, IndianRupee, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Search, Plus, Trash2, Edit, Calculator, Package, Layers, IndianRupee } from 'lucide-react';
 import { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Enquiry, Product, Vendor, MasterCategory, Brand, SubCostItem } from '@/types';
@@ -17,16 +16,6 @@ import { getProducts } from '@/app/actions/product';
 import { getVendors } from '@/app/actions/vendor';
 import { getCategories, getBrands } from '@/app/actions/category';
 import { useToast } from '@/hooks/use-toast';
-
-const PRESET_ACCESSORIES = [
-  { name: 'Mouse', price: 500 },
-  { name: 'Keyboard', price: 800 },
-  { name: 'CPU Upgrade', price: 12000 },
-  { name: '16GB RAM', price: 3500 },
-  { name: 'Monitor', price: 8500 },
-  { name: 'Laptop Bag', price: 1200 },
-  { name: '1-Yr Warranty', price: 2500 },
-];
 
 function TotalCostingContent() {
   const { currentUser } = useAppStore();
@@ -43,14 +32,14 @@ function TotalCostingContent() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [viewFilter, setViewFilter] = useState<'costed' | 'enquiries' | 'purchased' | 'all'>('costed');
+  const [showAllEnquiries, setShowAllEnquiries] = useState<boolean>(false);
 
-  // Edit / Manage sub-costing dialog state
+  // Edit / Add cost dialog state
   const [editingEnquiry, setEditingEnquiry] = useState<Enquiry | null>(null);
-  const [subCostItems, setSubCostItems] = useState<SubCostItem[]>([]);
+  const [costItems, setCostItems] = useState<SubCostItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Auto-open handler ref to avoid re-triggering
+  // Auto-open handler ref
   const autoOpenedRef = useRef<string | null>(null);
 
   const formatPrice = (price: number) => {
@@ -79,7 +68,7 @@ function TotalCostingContent() {
       console.error('Failed to load data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load total costing data.',
+        description: 'Failed to load enquiry costing data.',
         variant: 'destructive',
       });
     } finally {
@@ -91,57 +80,43 @@ function TotalCostingContent() {
     loadData();
   }, []);
 
-  // Open manage sub-costs dialog
-  const handleOpenManageSubCosts = (enquiry: Enquiry) => {
+  // ONLY ENQUIRY PRODUCTS (unpurchased enquiries)
+  const enquiryRecords = useMemo(() => {
+    return enquiries.filter((e) => !e.isPurchased);
+  }, [enquiries]);
+
+  // Open dialog to add/edit cost of enquiry product
+  const handleOpenAddCost = (enquiry: Enquiry) => {
     setEditingEnquiry(enquiry);
     if (enquiry.subCosts) {
       try {
-        setSubCostItems(JSON.parse(enquiry.subCosts));
+        setCostItems(JSON.parse(enquiry.subCosts));
       } catch {
-        setSubCostItems([]);
+        setCostItems([]);
       }
     } else {
-      setSubCostItems([]);
+      setCostItems([]);
     }
   };
 
-  // If redirected with ?enquiryId=xxx, auto open dialog once enquiries are loaded
+  // Auto-open dialog if redirected with ?enquiryId=xxx
   useEffect(() => {
-    if (paramEnquiryId && enquiries.length > 0 && autoOpenedRef.current !== paramEnquiryId) {
-      const target = enquiries.find((e) => e.id === paramEnquiryId);
+    if (paramEnquiryId && enquiryRecords.length > 0 && autoOpenedRef.current !== paramEnquiryId) {
+      const target = enquiryRecords.find((e) => e.id === paramEnquiryId);
       if (target) {
         autoOpenedRef.current = paramEnquiryId;
-        handleOpenManageSubCosts(target);
+        handleOpenAddCost(target);
       }
     }
-  }, [paramEnquiryId, enquiries]);
+  }, [paramEnquiryId, enquiryRecords]);
 
-  // Tab counts
-  const tabCounts = useMemo(() => {
-    const costed = enquiries.filter((e) => e.inTotalCosting || e.isPurchased || e.subCosts).length;
-    const enquiryOnly = enquiries.filter((e) => !e.isPurchased).length;
-    const purchasedOnly = enquiries.filter((e) => e.isPurchased).length;
-    return { costed, enquiryOnly, purchasedOnly, total: enquiries.length };
-  }, [enquiries]);
+  // Filtered enquiries based on showAllEnquiries toggle and search
+  const filteredEnquiries = useMemo(() => {
+    const list = showAllEnquiries
+      ? enquiryRecords
+      : enquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
 
-  // Base list depending on viewFilter
-  const baseRecords = useMemo(() => {
-    switch (viewFilter) {
-      case 'costed':
-        return enquiries.filter((e) => e.inTotalCosting || e.isPurchased || e.subCosts);
-      case 'enquiries':
-        return enquiries.filter((e) => !e.isPurchased);
-      case 'purchased':
-        return enquiries.filter((e) => e.isPurchased);
-      case 'all':
-      default:
-        return enquiries;
-    }
-  }, [enquiries, viewFilter]);
-
-  // Filtered by search and category
-  const filteredRecords = useMemo(() => {
-    return baseRecords
+    return list
       .filter((record) => {
         const product = products.find((p) => p.id === record.productId);
         const vendor = vendors.find((v) => v.id === record.vendorId);
@@ -150,12 +125,11 @@ function TotalCostingContent() {
 
         const matchesCategory = selectedCategory === 'all' || product?.categoryId === selectedCategory;
 
-        // Also search inside sub-costs items
-        let subCostsMatch = false;
+        let subMatch = false;
         if (record.subCosts) {
           try {
             const parsed: SubCostItem[] = JSON.parse(record.subCosts);
-            subCostsMatch = parsed.some((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            subMatch = parsed.some((s) => s.name.toLowerCase().includes(searchTerm.toLowerCase()));
           } catch {}
         }
 
@@ -166,55 +140,47 @@ function TotalCostingContent() {
           vendor?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           brand?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          subCostsMatch;
+          subMatch;
 
         return matchesCategory && matchesSearch;
       })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [baseRecords, products, vendors, categories, brands, selectedCategory, searchTerm]);
+  }, [enquiryRecords, showAllEnquiries, products, vendors, categories, brands, selectedCategory, searchTerm]);
 
-  // Overall Statistics for current base records
+  // Overall Statistics for enquiry products
   const stats = useMemo(() => {
+    const activeList = enquiryRecords.filter((e) => e.inTotalCosting || (e.subCosts && e.subCosts !== '[]'));
     let totalBase = 0;
-    let totalSubs = 0;
+    let totalAdded = 0;
 
-    baseRecords.forEach((record) => {
-      const isPurchased = !!record.isPurchased;
-      const qty = isPurchased ? (record.purchaseQuantity || record.quantity || 1) : (record.quantity || 1);
-      const unitPrice = isPurchased ? (record.purchasePrice || record.enquiryPrice || 0) : (record.enquiryPrice || 0);
-      const base = unitPrice * qty;
+    activeList.forEach((record) => {
+      const base = record.enquiryPrice * record.quantity;
       totalBase += base;
 
       if (record.subCosts) {
         try {
           const parsed: SubCostItem[] = JSON.parse(record.subCosts);
-          const subSum = parsed.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-          totalSubs += subSum;
+          const sum = parsed.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+          totalAdded += sum;
         } catch {}
       }
     });
 
-    const grandTotal = totalBase + totalSubs;
-    const grandTotalWithGst = grandTotal * 1.18;
-
     return {
-      count: baseRecords.length,
+      count: activeList.length,
+      totalEnquiries: enquiryRecords.length,
       totalBase,
-      totalSubs,
-      grandTotal,
-      grandTotalWithGst,
+      totalAdded,
+      totalCost: totalBase + totalAdded,
     };
-  }, [baseRecords]);
+  }, [enquiryRecords]);
 
+  // Toggle enquiry in Total Costing
   const handleToggleCosting = async (id: string, currentState: boolean) => {
     const newState = !currentState;
     try {
       await toggleEnquiryTotalCosting(id, newState);
       setEnquiries((prev) => prev.map((e) => (e.id === id ? { ...e, inTotalCosting: newState } : e)));
-      toast({
-        title: newState ? 'Added to Total Costing' : 'Removed from Total Costing',
-        description: newState ? 'Item is now included in Total Costing.' : 'Item removed from Total Costing.',
-      });
     } catch (err) {
       console.error('Failed to toggle costing:', err);
       toast({
@@ -225,29 +191,29 @@ function TotalCostingContent() {
     }
   };
 
-  const handleAddSubCostRow = () => {
-    setSubCostItems([...subCostItems, { name: '', price: 0 }]);
+  // Add cost item row
+  const handleAddCostRow = () => {
+    setCostItems([...costItems, { name: '', price: 0 }]);
   };
 
-  const handleAddPresetSubCost = (preset: { name: string; price: number }) => {
-    setSubCostItems([...subCostItems, { name: preset.name, price: preset.price }]);
-  };
-
-  const handleUpdateSubCostRow = (index: number, field: 'name' | 'price', value: string | number) => {
-    const updated = [...subCostItems];
+  // Update cost item row
+  const handleUpdateCostRow = (index: number, field: 'name' | 'price', value: string | number) => {
+    const updated = [...costItems];
     updated[index] = { ...updated[index], [field]: value };
-    setSubCostItems(updated);
+    setCostItems(updated);
   };
 
-  const handleRemoveSubCostRow = (index: number) => {
-    setSubCostItems(subCostItems.filter((_, i) => i !== index));
+  // Remove cost item row
+  const handleRemoveCostRow = (index: number) => {
+    setCostItems(costItems.filter((_, i) => i !== index));
   };
 
-  const handleSaveSubCosts = async () => {
+  // Save cost items
+  const handleSaveCosts = async () => {
     if (!editingEnquiry) return;
     setIsSaving(true);
     try {
-      const validItems = subCostItems.filter((item) => item.name.trim() !== '');
+      const validItems = costItems.filter((item) => item.name.trim() !== '');
       const subCostsString = validItems.length > 0 ? JSON.stringify(validItems) : null;
 
       await updateEnquiry(editingEnquiry.id, {
@@ -262,14 +228,14 @@ function TotalCostingContent() {
 
       toast({
         title: 'Success',
-        description: 'Total costing & sub-costs saved successfully.',
+        description: 'Cost of enquiry product updated successfully.',
       });
       setEditingEnquiry(null);
     } catch (error) {
-      console.error('Failed to save sub-costs:', error);
+      console.error('Failed to save costs:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update sub-costs.',
+        description: 'Failed to save cost.',
         variant: 'destructive',
       });
     } finally {
@@ -287,145 +253,109 @@ function TotalCostingContent() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
               <Calculator className="h-6 w-6 text-indigo-600" />
-              Total Costing
+              Total Costing (Enquiry Products)
             </h1>
             <p className="text-sm text-slate-500 mt-1">
-              View complete costing for enquiry and purchased products, with accessory & sub-component breakdowns (e.g. mouse, CPU, RAM).
+              Add and manage the sub-costs of enquiry products (e.g. laptop with mouse, CPU, RAM, etc.).
             </p>
           </div>
         </div>
 
-        {/* Metric Summary Cards */}
+        {/* Minimal Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Products in View
+                Costed Enquiry Products
               </CardTitle>
               <Package className="h-4 w-4 text-slate-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900">{stats.count}</div>
-              <p className="text-xs text-slate-500 mt-1">
-                {viewFilter === 'costed'
-                  ? 'Costed enquiries & purchases'
-                  : viewFilter === 'enquiries'
-                  ? 'Enquiry products'
-                  : viewFilter === 'purchased'
-                  ? 'Purchased products'
-                  : 'All total records'}
-              </p>
+              <p className="text-xs text-slate-500 mt-1">out of {stats.totalEnquiries} total enquiry products</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Base Products Cost
+                Base Enquiry Cost
               </CardTitle>
               <Layers className="h-4 w-4 text-slate-400" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-slate-900">₹ {formatPrice(stats.totalBase)}</div>
-              <p className="text-xs text-slate-500 mt-1">Total main unit costs (w/o GST)</p>
+              <p className="text-xs text-slate-500 mt-1">Base product prices</p>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-slate-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-emerald-600">
-                Sub-Costing Accessories
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                Added Product Costs
               </CardTitle>
-              <Plus className="h-4 w-4 text-emerald-500" />
+              <Plus className="h-4 w-4 text-indigo-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-700">₹ {formatPrice(stats.totalSubs)}</div>
-              <p className="text-xs text-slate-500 mt-1">Mouse, CPU, RAM & added parts</p>
+              <div className="text-2xl font-bold text-indigo-700">₹ {formatPrice(stats.totalAdded)}</div>
+              <p className="text-xs text-slate-500 mt-1">Accessories & sub-components</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 shadow-sm">
+          <Card className="bg-indigo-50/60 border-indigo-200">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                Grand Total Costing
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-indigo-900">
+                Total Costing
               </CardTitle>
-              <IndianRupee className="h-4 w-4 text-emerald-600" />
+              <IndianRupee className="h-4 w-4 text-indigo-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-extrabold text-emerald-900">₹ {formatPrice(stats.grandTotal)}</div>
-              <p className="text-xs font-semibold text-emerald-700 mt-0.5">
-                ₹ {formatPrice(stats.grandTotalWithGst)} (with 18% GST)
+              <div className="text-2xl font-extrabold text-indigo-950">₹ {formatPrice(stats.totalCost)}</div>
+              <p className="text-xs font-semibold text-indigo-700 mt-0.5">
+                Base + Added Costs
               </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* View Filter Tabs & Controls */}
-        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-slate-50 p-2.5 rounded-xl border">
-          {/* Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <button
+        {/* Filter and View Toggle */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-lg border">
+          <div className="flex items-center gap-2">
+            <Button
               type="button"
-              onClick={() => setViewFilter('costed')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                viewFilter === 'costed'
-                  ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border'
-              }`}
+              variant={!showAllEnquiries ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowAllEnquiries(false)}
+              className="text-xs h-8"
             >
-              Costed Items ({tabCounts.costed})
-            </button>
-            <button
+              Costed Enquiries ({stats.count})
+            </Button>
+            <Button
               type="button"
-              onClick={() => setViewFilter('enquiries')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                viewFilter === 'enquiries'
-                  ? 'bg-amber-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border'
-              }`}
+              variant={showAllEnquiries ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowAllEnquiries(true)}
+              className="text-xs h-8"
             >
-              Enquiry Products ({tabCounts.enquiryOnly})
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewFilter('purchased')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                viewFilter === 'purchased'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border'
-              }`}
-            >
-              Purchased ({tabCounts.purchasedOnly})
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewFilter('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                viewFilter === 'all'
-                  ? 'bg-slate-800 text-white shadow-sm'
-                  : 'bg-white text-slate-700 hover:bg-slate-100 border'
-              }`}
-            >
-              All Records ({tabCounts.total})
-            </button>
+              All Enquiry Products ({stats.totalEnquiries})
+            </Button>
           </div>
 
-          {/* Search & Category Filter */}
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full lg:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <Input
-                placeholder="Search products, mouse, cpu..."
+                placeholder="Search enquiry products..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 text-xs bg-white"
+                className="pl-9 h-8 text-xs bg-slate-50"
               />
             </div>
 
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="h-9 px-3 py-1 text-xs bg-white border rounded-md shadow-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-auto"
+              className="h-8 px-2.5 text-xs bg-slate-50 border rounded-md shadow-sm text-slate-700 focus:outline-none"
             >
               <option value="all">All Categories</option>
               {categories.map((c) => (
@@ -437,51 +367,49 @@ function TotalCostingContent() {
           </div>
         </div>
 
-        {/* Total Costing Table */}
+        {/* Enquiry Products Total Costing Table */}
         <div className="border rounded-xl bg-white shadow-sm overflow-hidden">
           <Table>
-            <TableHeader className="bg-slate-50/80">
+            <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-16 text-center font-semibold text-slate-700">Costing</TableHead>
-                <TableHead className="font-semibold text-slate-700">Product & Details</TableHead>
+                <TableHead className="w-14 text-center font-semibold text-slate-700">Costing</TableHead>
+                <TableHead className="font-semibold text-slate-700">Date</TableHead>
+                <TableHead className="font-semibold text-slate-700">Enquiry Product</TableHead>
                 <TableHead className="font-semibold text-slate-700">Vendor</TableHead>
                 <TableHead className="text-right font-semibold text-slate-700">Qty</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Base Cost (w/o GST)</TableHead>
-                <TableHead className="font-semibold text-slate-700">Sub-Costing Accessories</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700">Total Costing (w/o GST)</TableHead>
-                <TableHead className="text-right font-semibold text-emerald-700">Total Costing (+18% GST)</TableHead>
-                {canEdit && <TableHead className="text-center font-semibold text-slate-700">Actions</TableHead>}
+                <TableHead className="text-right font-semibold text-slate-700">Enquiry Price</TableHead>
+                <TableHead className="font-semibold text-slate-700">Added Costs (Sub-Costs)</TableHead>
+                <TableHead className="text-right font-semibold text-slate-700">Total Cost</TableHead>
+                {canEdit && <TableHead className="text-center font-semibold text-slate-700">Action</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-10 text-slate-500">
-                    Loading total costing records...
+                    Loading enquiry products...
                   </TableCell>
                 </TableRow>
-              ) : filteredRecords.length === 0 ? (
+              ) : filteredEnquiries.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 9 : 8} className="text-center py-12 text-slate-500">
                     <div className="flex flex-col items-center justify-center space-y-2">
                       <Calculator className="h-8 w-8 text-slate-300" />
-                      <p className="font-medium text-slate-700">No records found for current filter</p>
+                      <p className="font-medium text-slate-700">No enquiry products found</p>
                       <p className="text-xs text-slate-400">
-                        Check the &ldquo;Enquiry Products&rdquo; tab or mark products with the Total Costing checkbox in Enquiries.
+                        {showAllEnquiries
+                          ? 'No enquiries recorded yet.'
+                          : 'Click "All Enquiry Products" above or check the Total Costing checkbox in the Enquiries section.'}
                       </p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRecords.map((record) => {
+                filteredEnquiries.map((record) => {
                   const product = products.find((p) => p.id === record.productId);
                   const vendor = vendors.find((v) => v.id === record.vendorId);
-                  const category = categories.find((c) => c.id === product?.categoryId);
                   const brand = brands.find((b) => b.id === product?.brandId);
-                  const isPurchased = !!record.isPurchased;
-                  const qty = isPurchased ? (record.purchaseQuantity || record.quantity || 1) : (record.quantity || 1);
-                  const unitPrice = isPurchased ? (record.purchasePrice || record.enquiryPrice || 0) : (record.enquiryPrice || 0);
-                  const baseCost = unitPrice * qty;
+                  const baseCost = record.enquiryPrice * record.quantity;
 
                   const parsedSubCosts: SubCostItem[] = (() => {
                     if (!record.subCosts) return [];
@@ -492,115 +420,101 @@ function TotalCostingContent() {
                     }
                   })();
 
-                  const subCostTotal = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-                  const totalCosting = baseCost + subCostTotal;
-                  const totalCostingWithGst = totalCosting * 1.18;
+                  const addedCostTotal = parsedSubCosts.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                  const totalCost = baseCost + addedCostTotal;
                   const isHighlighted = paramEnquiryId === record.id;
 
                   return (
                     <TableRow
                       key={record.id}
-                      className={`hover:bg-slate-50/70 transition-colors ${
-                        isHighlighted ? 'bg-indigo-50/40 ring-2 ring-indigo-400' : ''
+                      className={`hover:bg-slate-50 transition-colors ${
+                        isHighlighted ? 'bg-indigo-50/50 ring-2 ring-indigo-400' : ''
                       }`}
                     >
-                      {/* Costing Checkbox */}
-                      <TableCell className="align-top py-4 text-center">
+                      {/* Checkbox */}
+                      <TableCell className="align-top py-3 text-center">
                         <input
                           type="checkbox"
                           checked={!!record.inTotalCosting}
                           onChange={() => handleToggleCosting(record.id, !!record.inTotalCosting)}
                           className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
-                          title={record.inTotalCosting ? 'Included in Total Costing (click to uncheck)' : 'Click to include in Total Costing'}
+                          title="Toggle in Total Costing"
                         />
                       </TableCell>
 
-                      {/* Product & Model & Status Badge */}
-                      <TableCell className="align-top py-4">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-slate-900">{product?.name || 'Unknown'}</p>
-                            {isPurchased ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                Purchased
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                                Enquiry
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
-                            {brand?.name && <span className="bg-slate-100 px-1.5 py-0.5 rounded font-medium">{brand.name}</span>}
-                            {product?.model && <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">{product.model}</span>}
-                            {category?.name && <span className="text-indigo-600 font-medium">{category.name}</span>}
+                      {/* Date */}
+                      <TableCell className="align-top py-3 text-xs text-slate-600">
+                        {new Date(record.date).toLocaleDateString()}
+                      </TableCell>
+
+                      {/* Product */}
+                      <TableCell className="align-top py-3">
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-900">{product?.name || 'Unknown'}</p>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                            {brand?.name && <span className="text-slate-600 font-medium">{brand.name}</span>}
+                            {product?.model && <span className="font-mono text-slate-500">({product.model})</span>}
                           </div>
                         </div>
                       </TableCell>
 
                       {/* Vendor */}
-                      <TableCell className="align-top py-4 text-sm text-slate-700">
+                      <TableCell className="align-top py-3 text-sm text-slate-700">
                         {vendor?.name || '-'}
                       </TableCell>
 
                       {/* Qty */}
-                      <TableCell className="align-top py-4 text-right font-medium text-slate-700">
-                        {qty}
+                      <TableCell className="align-top py-3 text-right font-medium text-slate-700">
+                        {record.quantity}
                       </TableCell>
 
-                      {/* Base Unit & Total Cost */}
-                      <TableCell className="align-top py-4 text-right">
+                      {/* Base Enquiry Price */}
+                      <TableCell className="align-top py-3 text-right">
                         <p className="font-semibold text-slate-900">₹ {formatPrice(baseCost)}</p>
-                        <p className="text-[11px] text-slate-400">@{formatPrice(unitPrice)}/unit</p>
+                        <p className="text-[11px] text-slate-400">@{formatPrice(record.enquiryPrice)}/unit</p>
                       </TableCell>
 
-                      {/* Sub-costing Components Pills */}
-                      <TableCell className="align-top py-4">
+                      {/* Added Costs / Sub-Costs */}
+                      <TableCell className="align-top py-3">
                         {parsedSubCosts.length > 0 ? (
-                          <div className="space-y-1.5 max-w-xs">
+                          <div className="space-y-1">
                             <div className="flex flex-wrap gap-1.5">
                               {parsedSubCosts.map((sub, i) => (
                                 <span
                                   key={i}
-                                  className="inline-flex items-center text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-full font-medium"
+                                  className="inline-flex items-center text-xs bg-indigo-50 text-indigo-800 border border-indigo-200 px-2 py-0.5 rounded font-medium"
                                 >
                                   {sub.name}: <strong className="ml-1 font-bold">₹{formatPrice(sub.price)}</strong>
                                 </span>
                               ))}
                             </div>
                             <p className="text-[11px] text-slate-500">
-                              Sub-total: <strong className="text-emerald-700">+₹{formatPrice(subCostTotal)}</strong>
+                              Sub-total: <strong className="text-indigo-700">+₹{formatPrice(addedCostTotal)}</strong>
                             </p>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">No accessories added</span>
+                          <span className="text-xs text-slate-400 italic">No sub-costs added</span>
                         )}
                       </TableCell>
 
-                      {/* Grand Total Costing (w/o GST) */}
-                      <TableCell className="align-top py-4 text-right">
+                      {/* Total Cost */}
+                      <TableCell className="align-top py-3 text-right">
                         <span className="text-base font-extrabold text-slate-900">
-                          ₹ {formatPrice(totalCosting)}
+                          ₹ {formatPrice(totalCost)}
                         </span>
                       </TableCell>
 
-                      {/* Grand Total Costing (+18% GST) */}
-                      <TableCell className="align-top py-4 text-right">
-                        <span className="text-base font-extrabold text-emerald-700">
-                          ₹ {formatPrice(totalCostingWithGst)}
-                        </span>
-                      </TableCell>
-
-                      {/* Actions */}
+                      {/* Action */}
                       {canEdit && (
-                        <TableCell className="align-top py-4 text-center">
+                        <TableCell className="align-top py-3 text-center">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleOpenManageSubCosts(record)}
+                            onClick={() => handleOpenAddCost(record)}
                             className="h-8 text-xs font-medium text-indigo-700 border-indigo-200 hover:bg-indigo-50"
                           >
-                            <Edit className="w-3.5 h-3.5 mr-1" /> Manage Sub-Costs
+                            <Edit className="w-3.5 h-3.5 mr-1" />
+                            {parsedSubCosts.length > 0 ? 'Edit Cost' : 'Add Cost'}
                           </Button>
                         </TableCell>
                       )}
@@ -612,26 +526,23 @@ function TotalCostingContent() {
           </Table>
         </div>
 
-        {/* Manage Sub-Costing Dialog */}
+        {/* Add / Edit Cost Dialog */}
         <Dialog open={!!editingEnquiry} onOpenChange={(open) => !open && setEditingEnquiry(null)}>
           {editingEnquiry && (() => {
             const product = products.find((p) => p.id === editingEnquiry.productId);
-            const isPurchased = !!editingEnquiry.isPurchased;
-            const qty = isPurchased ? (editingEnquiry.purchaseQuantity || editingEnquiry.quantity || 1) : (editingEnquiry.quantity || 1);
-            const unitPrice = isPurchased ? (editingEnquiry.purchasePrice || editingEnquiry.enquiryPrice || 0) : (editingEnquiry.enquiryPrice || 0);
-            const baseSpent = unitPrice * qty;
-            const currentSubSum = subCostItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
-            const currentTotal = baseSpent + currentSubSum;
+            const baseSpent = editingEnquiry.enquiryPrice * editingEnquiry.quantity;
+            const currentSubSum = costItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+            const totalCost = baseSpent + currentSubSum;
 
             return (
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2 text-lg">
                     <Calculator className="h-5 w-5 text-indigo-600" />
-                    Manage Sub-Costing & Accessories
+                    Add Cost of Enquiry Product
                   </DialogTitle>
                   <DialogDescription>
-                    Add accessories or sub-components (e.g. mouse, CPU, RAM) for <strong>{product?.name}</strong>.
+                    Add sub-costs for <strong>{product?.name}</strong> (e.g. mouse, CPU, charger, warranty).
                   </DialogDescription>
                 </DialogHeader>
 
@@ -639,74 +550,55 @@ function TotalCostingContent() {
                   {/* Base Product Info */}
                   <div className="bg-slate-50 p-3 rounded-lg border text-sm flex justify-between items-center">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-slate-900">{product?.name}</p>
-                        {isPurchased ? (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                            Purchased
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-                            Enquiry
-                          </span>
-                        )}
-                      </div>
+                      <p className="font-semibold text-slate-900">{product?.name}</p>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Base Product: {qty} × ₹{formatPrice(unitPrice)}
+                        Enquiry: {editingEnquiry.quantity} unit(s) × ₹{formatPrice(editingEnquiry.enquiryPrice)}
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-xs text-slate-500 block">Base Cost</span>
+                      <span className="text-xs text-slate-500 block">Base Price</span>
                       <span className="font-bold text-slate-800">₹ {formatPrice(baseSpent)}</span>
-                    </div>
-                  </div>
-
-                  {/* Quick-add chips */}
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-slate-600">Quick-Add Common Accessories:</Label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PRESET_ACCESSORIES.map((preset, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => handleAddPresetSubCost(preset)}
-                          className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-md border border-slate-200 font-medium transition-colors"
-                        >
-                          + {preset.name} (₹{preset.price})
-                        </button>
-                      ))}
                     </div>
                   </div>
 
                   {/* Sub-costs input list */}
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
-                      <Label className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                      <span className="text-xs font-semibold text-slate-700 uppercase tracking-wider">
                         Sub-Cost Items / Components
-                      </Label>
+                      </span>
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={handleAddSubCostRow}
-                        className="h-7 text-xs text-emerald-700 border-emerald-300 hover:bg-emerald-50"
+                        onClick={handleAddCostRow}
+                        className="h-7 text-xs text-indigo-700 border-indigo-300 hover:bg-indigo-50"
                       >
-                        <Plus className="w-3.5 h-3.5 mr-1" /> Add Custom Item
+                        <Plus className="w-3.5 h-3.5 mr-1" /> Add Item
                       </Button>
                     </div>
 
-                    {subCostItems.length === 0 ? (
-                      <p className="text-xs text-slate-400 italic bg-slate-50 p-3 rounded text-center border border-dashed">
-                        No sub-cost components added yet. Use the Quick-Add buttons above or click &ldquo;Add Custom Item&rdquo;.
-                      </p>
+                    {costItems.length === 0 ? (
+                      <div className="text-center py-6 border border-dashed rounded-lg bg-slate-50">
+                        <p className="text-xs text-slate-500 mb-2">No sub-costs added yet (e.g. mouse, CPU).</p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleAddCostRow}
+                          className="text-xs h-7"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Add First Item
+                        </Button>
+                      </div>
                     ) : (
-                      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-                        {subCostItems.map((item, idx) => (
+                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        {costItems.map((item, idx) => (
                           <div key={idx} className="flex items-center gap-2">
                             <Input
-                              placeholder="Component (e.g. Mouse, CPU, Bag...)"
+                              placeholder="Item (e.g. Mouse, CPU...)"
                               value={item.name}
-                              onChange={(e) => handleUpdateSubCostRow(idx, 'name', e.target.value)}
+                              onChange={(e) => handleUpdateCostRow(idx, 'name', e.target.value)}
                               className="flex-1 h-9 text-sm"
                             />
                             <div className="w-32 relative">
@@ -716,10 +608,10 @@ function TotalCostingContent() {
                                 step="0.01"
                                 placeholder="0.00"
                                 value={item.price || ''}
-                                onChange={(e) => handleUpdateSubCostRow(idx, 'price', parseFloat(e.target.value) || 0)}
+                                onChange={(e) => handleUpdateCostRow(idx, 'price', parseFloat(e.target.value) || 0)}
                                 onBlur={(e) => {
                                   const val = parseFloat(e.target.value);
-                                  if (!isNaN(val)) handleUpdateSubCostRow(idx, 'price', Number(val.toFixed(2)));
+                                  if (!isNaN(val)) handleUpdateCostRow(idx, 'price', Number(val.toFixed(2)));
                                 }}
                                 className="pl-6 h-9 text-sm"
                               />
@@ -728,7 +620,7 @@ function TotalCostingContent() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleRemoveSubCostRow(idx)}
+                              onClick={() => handleRemoveCostRow(idx)}
                               className="h-9 w-9 text-slate-400 hover:text-red-600 hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -739,26 +631,17 @@ function TotalCostingContent() {
                     )}
                   </div>
 
-                  {/* Real-time Total Costing Summary Card */}
-                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-4 rounded-xl">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
-                      Total Costing Summary
-                    </span>
-                    <div className="mt-2 flex justify-between items-center text-sm">
-                      <div>
-                        <p className="text-xs text-slate-600">Base Cost: ₹ {formatPrice(baseSpent)}</p>
-                        <p className="text-xs text-slate-600">
-                          Accessories: <span className="font-semibold text-emerald-700">+ ₹ {formatPrice(currentSubSum)}</span>
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-base font-extrabold text-slate-900">
-                          ₹ {formatPrice(currentTotal)} <span className="text-xs font-normal text-slate-500">(w/o GST)</span>
-                        </p>
-                        <p className="text-sm font-bold text-emerald-700">
-                          ₹ {formatPrice(currentTotal * 1.18)} <span className="text-xs font-normal text-emerald-600">(+18% GST)</span>
-                        </p>
-                      </div>
+                  {/* Total Cost Summary */}
+                  <div className="bg-slate-50 border p-3.5 rounded-xl flex justify-between items-center text-sm">
+                    <div>
+                      <p className="text-xs text-slate-600">Base: ₹ {formatPrice(baseSpent)}</p>
+                      <p className="text-xs text-slate-600">
+                        Added Costs: <span className="font-semibold text-indigo-700">+ ₹ {formatPrice(currentSubSum)}</span>
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs text-slate-500 block">Total Cost</span>
+                      <p className="text-lg font-bold text-slate-900">₹ {formatPrice(totalCost)}</p>
                     </div>
                   </div>
                 </div>
@@ -769,11 +652,11 @@ function TotalCostingContent() {
                   </Button>
                   <Button
                     type="button"
-                    onClick={handleSaveSubCosts}
+                    onClick={handleSaveCosts}
                     disabled={isSaving}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white"
                   >
-                    {isSaving ? 'Saving...' : 'Save Total Costing'}
+                    {isSaving ? 'Saving...' : 'Save Cost'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
