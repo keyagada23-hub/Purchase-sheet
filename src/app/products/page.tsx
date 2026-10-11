@@ -214,13 +214,8 @@ export default function ProductsPage() {
                               {(product.name || 'P').substring(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <div>
-                            <div className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-1">
-                              {product.name}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                              ID: {product.id.slice(0, 8)}
-                            </div>
+                          <div className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-1">
+                            {product.name}
                           </div>
                         </div>
                       </TableCell>
