@@ -7,7 +7,8 @@ import { Plus, Edit, Trash, Search, Barcode } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Product, Brand, MasterCategory } from '@/types';
 import { getProducts, deleteProduct as deleteProductAction } from '@/app/actions/product';
 import { getCategories, deleteCategory as deleteCategoryAction, updateCategory as updateCategoryAction, getBrands } from '@/app/actions/category';
@@ -165,50 +166,115 @@ export default function ProductsPage() {
           </div>
         </div>
 
-        <h2 className="text-lg font-semibold text-slate-800 mb-4 mt-6">
-          {selectedCategory === 'all' ? 'All Products' : productCategories.find(c => c.id === selectedCategory)?.name || 'Products'}
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredProducts.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-slate-500 bg-white border rounded-xl">
-              No products found
-            </div>
-          ) : (
-            filteredProducts.map((product) => (
-              <div key={product.id} className="bg-white border rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col group">
-                <div className="p-4 flex flex-col flex-1 relative group">
-                  <div className="text-xs font-semibold text-blue-600 mb-1">{categories.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}</div>
-                  <h3 className="font-bold text-slate-900 line-clamp-1 cursor-pointer hover:text-blue-600 hover:underline" title={product.name} onClick={() => setSelectedProduct(product)}>{product.name}</h3>
-                  <div className="text-sm text-slate-500 mt-1 flex justify-between items-center">
-                    <span>{brands.find(b => b.id === product.brandId)?.name || 'No Brand'}</span>
-                    <span className="font-medium text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-xs truncate max-w-[50%] text-right" title={product.model}>{product.model}</span>
-                  </div>
-                  <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    <div className="flex flex-col gap-1.5">
-                      <span className="text-xs text-slate-500">Master Record</span>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-1">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-slate-800">
+              {selectedCategory === 'all' ? 'All Products' : productCategories.find(c => c.id === selectedCategory)?.name || 'Products'}
+            </h2>
+            <span className="text-sm text-slate-500">
+              {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} found
+            </span>
+          </div>
+
+          <div className="border rounded-md bg-white overflow-hidden shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Brand</TableHead>
+                  <TableHead>Model</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-10 text-slate-500">
+                      No products found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredProducts.map((product) => (
+                    <TableRow 
+                      key={product.id} 
+                      className="hover:bg-slate-50 cursor-pointer transition-colors" 
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <TableCell className="font-medium text-slate-900">
+                        <div className="flex items-center gap-3">
+                          {product.photoUrl ? (
+                            <img 
+                              src={product.photoUrl} 
+                              alt={product.name} 
+                              className="h-10 w-10 object-contain rounded-md border p-0.5 bg-slate-50 shrink-0" 
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-md bg-slate-100 border flex items-center justify-center text-xs font-semibold text-slate-500 shrink-0">
+                              {(product.name || 'P').substring(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className="font-semibold text-slate-900 hover:text-blue-600 line-clamp-1">
+                              {product.name}
+                            </div>
+                            <div className="text-xs text-slate-400">
+                              ID: {product.id.slice(0, 8)}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                          {categories.find(c => c.id === product.categoryId)?.name || 'Uncategorized'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-sm text-slate-600">
+                        {brands.find(b => b.id === product.brandId)?.name || '-'}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded text-slate-700">
+                          {product.model || '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right space-x-1" onClick={(e) => e.stopPropagation()}>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 text-xs mr-1" 
+                          onClick={() => router.push(`/enquiries/new?productId=${product.id}`)}
+                        >
+                          Enquire
+                        </Button>
                         {canEdit && (
                           <>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-blue-600" onClick={() => router.push(`/products/${product.id}/edit`)}>
-                              <Edit className="h-3 w-3" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-blue-600" 
+                              onClick={() => router.push(`/products/${product.id}/edit`)}
+                              title="Edit product"
+                            >
+                              <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-600" onClick={() => deleteProduct(product.id)}>
-                              <Trash className="h-3 w-3" />
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-red-600" 
+                              onClick={() => deleteProduct(product.id)}
+                              title="Delete product"
+                            >
+                              <Trash className="h-4 w-4" />
                             </Button>
                           </>
                         )}
-                      </div>
-                      <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => router.push(`/enquiries/new?productId=${product.id}`)}>
-                        Enquire
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </div>
 
@@ -244,9 +310,7 @@ export default function ProductsPage() {
             </div>
           )}
           <DialogFooter className="mt-4 sm:justify-end gap-2">
-            <DialogClose asChild>
-              <Button type="button" variant="outline" className="w-full sm:w-auto">Close</Button>
-            </DialogClose>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setSelectedProduct(null)}>Close</Button>
             {canEdit && selectedProduct && (
               <Button type="button" onClick={() => router.push(`/products/${selectedProduct.id}/edit`)}>
                 <Edit className="mr-2 h-4 w-4" /> Edit Record
