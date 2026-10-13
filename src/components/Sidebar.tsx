@@ -36,9 +36,9 @@ export default function Sidebar() {
     { name: 'Total Costing', href: '/total-costing', icon: Calculator, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Purchases', href: '/purchases', icon: ShoppingCart, roles: ['User', 'Admin', 'Developer'] },
     { name: 'Reports', href: '/reports', icon: BarChart3, roles: ['Admin', 'Developer'] },
-    { name: 'Master Data', href: '/master-data', icon: Layers, roles: ['Developer'] },
+    { name: 'Master Data', href: '/master-data', icon: Layers, roles: ['Admin', 'Developer'] },
     { name: 'Users & Access', href: '/users', icon: Users, roles: ['Admin', 'Developer'] },
-    { name: 'System Settings', href: '/settings', icon: Settings, roles: ['Developer'] },
+    { name: 'System Settings', href: '/settings', icon: Settings, roles: ['Admin', 'Developer'] },
   ];
 
   if (!mounted || !currentUser) return null;

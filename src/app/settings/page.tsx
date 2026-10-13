@@ -9,7 +9,10 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Trash2, Loader2, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+import { useToast } from '@/hooks/use-toast';
+
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [categories, setCategories] = useState<MasterCategory[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +42,15 @@ export default function SettingsPage() {
     if (!newBrandName.trim()) return;
     try {
       const b = await createBrand({ name: newBrandName });
-      setBrands([...brands, b]);
+      if (brands.some(existing => existing.id === b.id)) {
+        toast({ title: "Brand Exists", description: `Brand "${b.name}" already exists.` });
+      } else {
+        setBrands(prev => [...prev, b]);
+        toast({ title: "Success", description: `Brand "${b.name}" added successfully!` });
+      }
       setNewBrandName('');
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to add brand.", variant: "destructive" });
     }
   };
 
@@ -50,8 +58,9 @@ export default function SettingsPage() {
     try {
       await deleteBrand(id);
       setBrands(brands.filter(b => b.id !== id));
-    } catch (err) {
-      console.error(err);
+      toast({ title: "Success", description: "Brand deleted successfully." });
+    } catch (err: any) {
+      toast({ title: "Error", description: "Cannot delete this brand because it is in use by products.", variant: "destructive" });
     }
   };
 
@@ -60,10 +69,15 @@ export default function SettingsPage() {
     if (!newCatName.trim()) return;
     try {
       const c = await createCategory({ name: newCatName, type: newCatType });
-      setCategories([...categories, c]);
+      if (categories.some(existing => existing.id === c.id)) {
+        toast({ title: "Category Exists", description: `Category "${c.name}" already exists.` });
+      } else {
+        setCategories(prev => [...prev, c]);
+        toast({ title: "Success", description: `Category "${c.name}" added successfully!` });
+      }
       setNewCatName('');
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      toast({ title: "Error", description: err?.message || "Failed to add category.", variant: "destructive" });
     }
   };
 
@@ -71,8 +85,9 @@ export default function SettingsPage() {
     try {
       await deleteCategory(id);
       setCategories(categories.filter(c => c.id !== id));
-    } catch (err) {
-      console.error(err);
+      toast({ title: "Success", description: "Category deleted successfully." });
+    } catch (err: any) {
+      toast({ title: "Error", description: "Cannot delete this category because it is in use.", variant: "destructive" });
     }
   };
 

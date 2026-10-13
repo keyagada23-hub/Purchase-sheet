@@ -69,12 +69,12 @@ export default function NewProductPage() {
 
   const handleCreateCategory = async (name: string) => {
     try {
-      const newCat = await createCategory({ name, type: 'Product', description: null });
-      setCategories(prev => [...prev, newCat]);
+      const newCat = await createCategory({ name, type: 'Product' });
+      setCategories(prev => prev.some(c => c.id === newCat.id) ? prev : [...prev, newCat]);
       return newCat.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: "Error", description: "Failed to create category. See console.", variant: "destructive" });
+      toast({ title: "Error", description: error?.message || "Failed to create category.", variant: "destructive" });
       return "";
     }
   };
@@ -86,12 +86,12 @@ export default function NewProductPage() {
 
   const handleCreateBrand = async (name: string) => {
     try {
-      const newBrand = await createBrand({ name, description: null });
-      setBrands(prev => [...prev, newBrand]);
+      const newBrand = await createBrand({ name });
+      setBrands(prev => prev.some(b => b.id === newBrand.id) ? prev : [...prev, newBrand]);
       return newBrand.id;
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      toast({ title: "Error", description: "Failed to create brand. See console.", variant: "destructive" });
+      toast({ title: "Error", description: error?.message || "Failed to create brand.", variant: "destructive" });
       return "";
     }
   };
